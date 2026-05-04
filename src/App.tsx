@@ -72,15 +72,21 @@ export default function App(): JSX.Element {
   });
 
   // ── selfie ────────────────────────────────────────────────────────
+
   const {
     selfieImage,
     faceSidePhoto,
+    captureStatus, // ← NEW: CaptureStatus object
     captureSelfie,
     captureFaceSidePhoto,
     resetSelfie,
+    setSelfieImage,
   } = useSelfie({
     webcamRef: selfieWebcamRef,
     livenessDone,
+    yawEstimate: landmarkStatus.yawEstimate, // ← NEW: pass live yaw
+    faceQualityOk: landmarkStatus.qualityOk, // ← NEW: pass live quality
+    faceDetected: landmarkStatus.faceDetected, // ← NEW: pass live detection
     pushError,
     clearError,
     nextStep,
@@ -172,7 +178,7 @@ export default function App(): JSX.Element {
     [internalPayload, msisdn],
   );
 
-
+  
   // ── reset all ─────────────────────────────────────────────────────
   const handleReset = () =>
     resetFlow(() => {
@@ -197,7 +203,6 @@ export default function App(): JSX.Element {
     anchor.click();
     URL.revokeObjectURL(url);
   };
-
 
   // ── render ────────────────────────────────────────────────────────
   return (
@@ -259,6 +264,7 @@ export default function App(): JSX.Element {
                 phase={phase}
                 startChallenges={startChallenges}
                 retryChallenge={retryChallenge}
+                captureStatus={captureStatus}
               />
             )}
 

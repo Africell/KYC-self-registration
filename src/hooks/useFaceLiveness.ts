@@ -91,7 +91,7 @@ export function useFaceLiveness({
     yawEstimate: 0,
     qualityOk: false,
     hint: "Center your face inside the frame.",
-    faceBox: null, // ← NEW
+    faceBox: null,
   });
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -166,6 +166,13 @@ export function useFaceLiveness({
 
         if (nextIndex >= seq.length) {
           setChallengeIndex(seq.length - 1);
+          // ── FIX 1: Reset yaw to 0 when transitioning to done so the
+          // side-capture phase starts from a clean baseline, not the
+          // yaw value left over from the last challenge frame.
+          setLandmarkStatus((prev) => ({
+            ...prev,
+            yawEstimate: 0,
+          }));
           setPhase("done");
           phaseRef.current = "done";
         } else {
@@ -215,11 +222,64 @@ export function useFaceLiveness({
       yawEstimate: 0,
       qualityOk: false,
       hint: "Center your face inside the frame.",
-      faceBox: null, // ← NEW
+      faceBox: null,
     });
     setPhase("detecting");
     phaseRef.current = "detecting";
   }, [clearChallengeTimer, challengeCount]);
+
+  // ── "done" phase: lightweight face tracking to keep yaw live ─────────────
+  // FIX 2: After liveness completes, run a stripped-down detection loop that
+  // only updates yawEstimate + faceBox so the side-capture phase in useSelfie
+  // can react to head turns. No challenge logic runs here.
+  const analyzeForSideCapture = useCallback(async (): Promise<void> => {
+    if (!modelsLoaded) return;
+    const video = webcamRef.current?.video as HTMLVideoElement | undefined;
+    if (!video) return;
+
+    try {
+      await waitForVideoReady(video);
+      const detections = await faceapi
+        .detectAllFaces(
+          video,
+          new faceapi.TinyFaceDetectorOptions({
+            inputSize: 224,
+            scoreThreshold: 0.35,
+          }),
+        )
+        .withFaceLandmarks();
+
+      if (!detections || detections.length !== 1) {
+        setLandmarkStatus((prev) => ({
+          ...prev,
+          faceDetected: false,
+          faceBox: null,
+          yawEstimate: 0,
+        }));
+        return;
+      }
+
+      const detection = detections[0];
+      const yaw = computeYawFromLandmarks(detection.landmarks);
+      const qualityOk = computeFaceQuality(detection);
+      const rawBox = detection.detection.box;
+
+      setLandmarkStatus({
+        faceDetected: true,
+        yawEstimate: Number(yaw.toFixed(4)),
+        qualityOk,
+        hint: "Turn your head to the right for the side photo.",
+        faceBox: {
+          x: rawBox.x,
+          y: rawBox.y,
+          width: rawBox.width,
+          height: rawBox.height,
+        },
+      });
+    } catch {
+      // silent — non-critical tracking
+    }
+  }, [modelsLoaded, webcamRef]);
 
   // ── Main analysis loop ────────────────────────────────────────────────────
   const analyzeLiveFace = useCallback(async (): Promise<void> => {
@@ -248,7 +308,7 @@ export function useFaceLiveness({
           setLandmarkStatus((prev) => ({
             ...prev,
             faceDetected: false,
-            faceBox: null, // ← NEW
+            faceBox: null,
             hint: "Only one person should be in frame.",
           }));
           if (currentPhase === "ready") {
@@ -258,24 +318,73 @@ export function useFaceLiveness({
           return;
         }
 
-        const faceDetected = detections?.length === 1;
-
-        // ── NEW: extract faceBox from detection ────────────────────────────
-        const rawBox = faceDetected
-          ? detections[0].detection.box
-          : null;
+        const rawDetected = detections?.length === 1;
+        const rawBox = rawDetected ? detections[0].detection.box : null;
         const faceBox = rawBox
           ? { x: rawBox.x, y: rawBox.y, width: rawBox.width, height: rawBox.height }
           : null;
 
+        // Check that the face is genuinely inside the guide oval.
+        // We test the four cardinal extremes of the RAW face box (no padding)
+        // against the guide oval equation. Using the raw box avoids the problem
+        // of the padded head ellipse being larger than the guide oval even when
+        // the face looks perfectly centered.
+        // Threshold 1.15 gives a comfortable tolerance — the face corners are
+        // allowed to sit slightly outside the mathematical oval edge, which is
+        // necessary because face-api boxes are conservative and often clip the
+        // actual face boundary.
+        const faceInOval = (() => {
+          if (!rawBox || !video.videoWidth || !video.videoHeight) return false;
+          const vw = video.videoWidth;
+          const vh = video.videoHeight;
+
+          // Guide oval in pixel space — mirrors FaceOvalOverlay SVG constants
+          const ovalCX = 0.50 * vw;
+          const ovalCY = 0.48 * vh;
+          const ovalRX = 0.22 * vw;
+          const ovalRY = 0.31 * vh;
+
+          // Four cardinal points of the raw face box
+          const faceCX = rawBox.x + rawBox.width / 2;
+          const faceCY = rawBox.y + rawBox.height / 2;
+          const points = [
+            [faceCX,                  rawBox.y],                        // top
+            [faceCX,                  rawBox.y + rawBox.height],        // bottom
+            [rawBox.x,                faceCY],                          // left
+            [rawBox.x + rawBox.width, faceCY],                          // right
+            [faceCX,                  faceCY],                          // centre
+          ];
+
+          const THRESHOLD = 1.15;
+          for (const [px, py] of points) {
+            const dx = (px - ovalCX) / ovalRX;
+            const dy = (py - ovalCY) / ovalRY;
+            if (dx * dx + dy * dy > THRESHOLD) return false;
+          }
+          return true;
+        })();
+
+        const faceDetected = rawDetected && faceInOval;
+
+        const hint = !rawDetected
+          ? "Center your face inside the frame."
+          : !faceInOval
+            ? "Move your face into the oval guide."
+            : "Face detected! Click 'I'm Ready' to begin.";
+
         setLandmarkStatus((prev) => ({
           ...prev,
           faceDetected,
-          faceBox, // ← NEW
-          hint: faceDetected
-            ? "Face detected! Click 'I'm Ready' to begin."
-            : "Center your face inside the frame.",
+          // Always show the box so the overlay can draw it, even when out of oval
+          faceBox,
+          hint,
         }));
+
+        // Step back to detecting if face drifts out of oval while in ready state
+        if (currentPhase === "ready" && !faceDetected) {
+          setPhase("detecting");
+          phaseRef.current = "detecting";
+        }
 
         if (faceDetected && currentPhase === "detecting") {
           setPhase("ready");
@@ -324,7 +433,7 @@ export function useFaceLiveness({
           yawEstimate: 0,
           qualityOk: false,
           hint: "No face detected. Move closer or improve lighting.",
-          faceBox: null, // ← NEW
+          faceBox: null,
         });
         return;
       }
@@ -335,7 +444,7 @@ export function useFaceLiveness({
           yawEstimate: 0,
           qualityOk: false,
           hint: "Only one person should be in frame.",
-          faceBox: null, // ← NEW
+          faceBox: null,
         });
         return;
       }
@@ -347,7 +456,6 @@ export function useFaceLiveness({
         ? detectGestures(video)
         : null;
 
-      // ── NEW: extract faceBox in challenging phase ──────────────────────
       const rawBox = detection.detection.box;
       const faceBox = {
         x: rawBox.x,
@@ -437,7 +545,7 @@ export function useFaceLiveness({
         yawEstimate: Number(yaw.toFixed(4)),
         qualityOk,
         hint,
-        faceBox, // ← NEW
+        faceBox,
       });
     } catch (err) {
       console.error("Face detection error:", err);
@@ -450,7 +558,14 @@ export function useFaceLiveness({
 
     intervalRef.current = window.setInterval(() => {
       const p = phaseRef.current;
-      if (p === "done" || p === "timeout") return;
+      // FIX 2 (interval side): when done, run lightweight yaw tracking
+      // instead of stopping entirely.
+      if (p === "done") {
+        void analyzeForSideCapture();
+        return;
+      }
+      // timeout: truly stop
+      if (p === "timeout") return;
       void analyzeLiveFace();
     }, 650);
 
@@ -460,7 +575,7 @@ export function useFaceLiveness({
         intervalRef.current = null;
       }
     };
-  }, [active, modelsLoaded, analyzeLiveFace]);
+  }, [active, modelsLoaded, analyzeLiveFace, analyzeForSideCapture]);
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => {
@@ -487,7 +602,7 @@ export function useFaceLiveness({
       yawEstimate: 0,
       qualityOk: false,
       hint: "Center your face inside the frame.",
-      faceBox: null, // ← NEW
+      faceBox: null,
     });
   }, [clearChallengeTimer, challengeCount]);
 

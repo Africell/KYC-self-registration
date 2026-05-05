@@ -2,8 +2,8 @@
 import type { ExtractedFields, Step } from "../../types/kyc";
 
 export const steps: Step[] = [
-  //  { key: "msisdn", label: "Mobile Number" },
-  // { key: "consent", label: "Consent" },
+  { key: "msisdn", label: "Mobile Number" },
+  { key: "consent", label: "Consent" },
   { key: "selfie", label: "Selfie & Liveness" },
   { key: "document", label: "Document Capture" },
   { key: "ocr", label: "OCR & MRZ" },
@@ -25,10 +25,10 @@ export const docVideoConstraints = {
 
 export const initialFields: ExtractedFields = {
   FirstName: "",
-  MiddleName:"",
+  MiddleName: "",
   LastName: "",
-  Email:"",
-  Address:"",
+  Email: "",
+  Address: "",
   IdDocSerialNumber: "",
   Nationality: "",
   BirthDate: "",
@@ -45,8 +45,7 @@ export type LivenessChallenge =
   | "raiseLeftHand"
   | "raiseRightHand"
   | "nodHead"
-  | "moveCloser"
-
+  | "moveCloser";
 
 export type FaceMatchResult = {
   distance: number;

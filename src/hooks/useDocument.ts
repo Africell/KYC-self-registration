@@ -1,4 +1,5 @@
 // src/hooks/useDocument.ts
+
 import { useCallback, useState } from "react";
 import type { RefObject } from "react";
 import Webcam from "react-webcam";
@@ -6,6 +7,7 @@ import { analyzeDocumentQuality } from "../lib/quality";
 import { detectPossibleSpoof } from "../lib/services/spoof.service";
 import { fileToDataUrl, dataUrlToImage, getCanvasFromImage, canvasToBlob } from "../utils/image";
 import type { DocumentQuality } from "../types/kyc";
+import type { KYCSession } from "../lib/services/session.service";
 
 interface UseDocumentProps {
   docWebcamRef: RefObject<Webcam | null>;
@@ -26,6 +28,9 @@ interface UseDocumentReturn {
   handleDocumentBackUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   saveDocumentBlobLocally: () => Promise<void>;
   saveDocumentBackBlobLocally: () => Promise<void>;
+  rehydrateDocument: (
+    s: Pick<KYCSession, "documentImage" | "documentBackImage" | "documentQuality" | "documentBackQuality">
+  ) => void;
   resetDocument: () => void;
 }
 
@@ -34,13 +39,13 @@ export function useDocument({
   pushError,
   clearError,
 }: UseDocumentProps): UseDocumentReturn {
-  const [documentImage, setDocumentImage]               = useState("");
-  const [documentQuality, setDocumentQuality]           = useState<DocumentQuality | null>(null);
-  const [documentBackImage, setDocumentBackImage]       = useState("");
-  const [documentBackQuality, setDocumentBackQuality]   = useState<DocumentQuality | null>(null);
-  const [documentPreviewMode, setDocumentPreviewMode]   = useState<"camera" | "upload">("camera");
+  const [documentImage, setDocumentImage]             = useState("");
+  const [documentQuality, setDocumentQuality]         = useState<DocumentQuality | null>(null);
+  const [documentBackImage, setDocumentBackImage]     = useState("");
+  const [documentBackQuality, setDocumentBackQuality] = useState<DocumentQuality | null>(null);
+  const [documentPreviewMode, setDocumentPreviewMode] = useState<"camera" | "upload">("camera");
 
-  // ── helpers ────────────────────────────────────────────────────────────────
+  // ── helpers ──────────────────────────────────────────────────────────────
   const captureFromWebcam = useCallback(async (): Promise<string> => {
     if (!docWebcamRef.current) throw new Error("Webcam not ready.");
     const dataUrl = docWebcamRef.current.getScreenshot({ width: 1920, height: 1080 });
@@ -60,7 +65,7 @@ export function useDocument({
     URL.revokeObjectURL(url);
   }, []);
 
-  // ── front document ─────────────────────────────────────────────────────────
+  // ── front document ───────────────────────────────────────────────────────
   const captureDocument = useCallback(async (): Promise<void> => {
     try {
       clearError();
@@ -92,7 +97,7 @@ export function useDocument({
         pushError("document", err instanceof Error ? err.message : "Could not read uploaded document image.");
       }
     },
-    [clearError, pushError]
+    [clearError, pushError],
   );
 
   const saveDocumentBlobLocally = useCallback(async (): Promise<void> => {
@@ -104,7 +109,7 @@ export function useDocument({
     }
   }, [documentImage, saveImageLocally, pushError]);
 
-  // ── back document ──────────────────────────────────────────────────────────
+  // ── back document ────────────────────────────────────────────────────────
   const captureDocumentBack = useCallback(async (): Promise<void> => {
     try {
       clearError();
@@ -136,7 +141,7 @@ export function useDocument({
         pushError("document-back", err instanceof Error ? err.message : "Could not read uploaded back image.");
       }
     },
-    [clearError, pushError]
+    [clearError, pushError],
   );
 
   const saveDocumentBackBlobLocally = useCallback(async (): Promise<void> => {
@@ -148,7 +153,18 @@ export function useDocument({
     }
   }, [documentBackImage, saveImageLocally, pushError]);
 
-  // ── reset ──────────────────────────────────────────────────────────────────
+  // ── rehydrate ────────────────────────────────────────────────────────────
+  const rehydrateDocument = useCallback(
+    (s: Pick<KYCSession, "documentImage" | "documentBackImage" | "documentQuality" | "documentBackQuality">) => {
+      if (s.documentImage)       setDocumentImage(s.documentImage);
+      if (s.documentBackImage)   setDocumentBackImage(s.documentBackImage);
+      if (s.documentQuality)     setDocumentQuality(s.documentQuality);
+      if (s.documentBackQuality) setDocumentBackQuality(s.documentBackQuality);
+    },
+    [],
+  );
+
+  // ── reset ────────────────────────────────────────────────────────────────
   const resetDocument = useCallback(() => {
     setDocumentImage("");
     setDocumentQuality(null);
@@ -170,6 +186,7 @@ export function useDocument({
     handleDocumentBackUpload,
     saveDocumentBlobLocally,
     saveDocumentBackBlobLocally,
+    rehydrateDocument,
     resetDocument,
   };
 }

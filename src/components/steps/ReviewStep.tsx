@@ -6,11 +6,21 @@ import {
   type SIMRegistrationPayload,
 } from "../../lib/api/kyc.api";
 import axios from "axios";
+import { clearOTPTokenFromStorage, clearSession } from "../../lib/services/session.service";
 
+// AFTER — parse the stored object, extract just the token string
 const TOKEN_STORAGE_KEY = "kyc_otp_token";
 
 function loadToken(): string {
-  return localStorage.getItem(TOKEN_STORAGE_KEY) ?? "";
+  try {
+    const raw = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!raw) return "";
+    const parsed = JSON.parse(raw) as { token: string; expiresAt: number };
+    if (Date.now() > parsed.expiresAt) return ""; // expired
+    return parsed.token ?? "";
+  } catch {
+    return "";
+  }
 }
 
 type SubmitState =
@@ -38,39 +48,43 @@ export default function ReviewStep({
     status: "idle",
   });
 
- const handleSubmit = async () => {
-  try {
-    setSubmitState({ status: "loading" });
+  const handleSubmit = async () => {
+    try {
+      setSubmitState({ status: "loading" });
 
-    const token = loadToken();
-    if (!token) {
-      setSubmitState({
-        status: "error",
-        message: "Session expired. Please restart the flow and verify your number again.",
-      });
-      return;
-    }
+      const token = loadToken();
+      if (!token) {
+        setSubmitState({
+          status: "error",
+          message:
+            "Session expired. Please restart the flow and verify your number again.",
+        });
+        return;
+      }
 
-    const response = await apiSubmitSIMRegistration(backendPayload, token);
-    setSubmitState({ status: "success", data: response });
-  } catch (err: unknown) {
-    if (axios.isAxiosError(err)) {
-      const body = err.response?.data;
-      // Use ErrorDescription first, fall back to StatusDescription, then generic message
-      const message =
-        body?.ErrorDescription ||
-        body?.StatusDescription ||
-        err.message ||
-        "Unexpected error occurred.";
-      setSubmitState({ status: "error", message });
-    } else {
-      setSubmitState({
-        status: "error",
-        message: err instanceof Error ? err.message : "Unexpected error occurred.",
-      });
+      const response = await apiSubmitSIMRegistration(backendPayload, token);
+      clearSession();
+      clearOTPTokenFromStorage();
+      setSubmitState({ status: "success", data: response });
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const body = err.response?.data;
+        // Use ErrorDescription first, fall back to StatusDescription, then generic message
+        const message =
+          body?.ErrorDescription ||
+          body?.StatusDescription ||
+          err.message ||
+          "Unexpected error occurred.";
+        setSubmitState({ status: "error", message });
+      } else {
+        setSubmitState({
+          status: "error",
+          message:
+            err instanceof Error ? err.message : "Unexpected error occurred.",
+        });
+      }
     }
-  }
-};
+  };
 
   return (
     <section className="space-y-5">

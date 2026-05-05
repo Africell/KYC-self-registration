@@ -1,9 +1,11 @@
 // src/hooks/useFaceMatch.ts
+
 import { useCallback, useState } from "react";
 import * as faceapi from "face-api.js";
 import { getBestFaceDescriptor, getFaceMatchVerdict } from "../lib/services/face.service";
 import { dataUrlToImage } from "../utils/image";
 import type { FaceMatchResult } from "../types/kyc";
+import type { KYCSession } from "../lib/services/session.service";
 
 interface UseFaceMatchProps {
   selfieImage: string;
@@ -17,6 +19,7 @@ interface UseFaceMatchReturn {
   faceMatch: FaceMatchResult | null;
   busy: boolean;
   runFaceMatch: () => Promise<void>;
+  rehydrateFaceMatch: (s: Pick<KYCSession, "faceMatch">) => void;
   resetFaceMatch: () => void;
 }
 
@@ -64,12 +67,20 @@ export function useFaceMatch({
         "face-match",
         err instanceof Error
           ? `${err.message} Ensure both images contain one clear face.`
-          : "Face match failed."
+          : "Face match failed.",
       );
     } finally {
       setBusy(false);
     }
   }, [selfieImage, documentImage, pushError, clearError, nextStep]);
+
+  // ── rehydrate ─────────────────────────────────────────────────────────────
+  const rehydrateFaceMatch = useCallback(
+    (s: Pick<KYCSession, "faceMatch">) => {
+      if (s.faceMatch) setFaceMatch(s.faceMatch);
+    },
+    [],
+  );
 
   const resetFaceMatch = useCallback(() => {
     setFaceMatch(null);
@@ -79,6 +90,7 @@ export function useFaceMatch({
     faceMatch,
     busy,
     runFaceMatch,
+    rehydrateFaceMatch,
     resetFaceMatch,
   };
 }

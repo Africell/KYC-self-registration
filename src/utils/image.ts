@@ -1,4 +1,5 @@
-import { formatDate } from "../lib/utils";
+// src/utils/image.ts
+
 import type { SubmissionPayload } from "../types/kyc";
 
 export function getCanvasFromImage(
@@ -78,13 +79,11 @@ export function rgbToGray(r: number, g: number, b: number): number {
 
 function truncate(value: unknown, maxLength = 50): unknown {
   if (typeof value !== "string") return value;
-
   return value.length > maxLength ? value.slice(0, maxLength) + "..." : value;
 }
+
 export function truncateDeep(obj: any, maxLength = 50): any {
-  if (typeof obj === "string") {
-    return truncate(obj, maxLength);
-  }
+  if (typeof obj === "string") return truncate(obj, maxLength);
 
   if (Array.isArray(obj)) {
     return obj.map((item) => truncateDeep(item, maxLength));
@@ -101,28 +100,39 @@ export function truncateDeep(obj: any, maxLength = 50): any {
   return obj;
 }
 
+// ── Gender helper ─────────────────────────────────────────────────────────────
+// Returns "Male" | "Female" | "" — never defaults to Female when value is absent.
+function resolveGender(raw: string | undefined | null): string {
+  if (!raw) return "";
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "m" || normalized === "male") return "Male";
+  if (normalized === "f" || normalized === "female") return "Female";
+  return "";
+}
+
 export function transformToBackendPayload(
   payload: SubmissionPayload,
   msisdn: string,
 ) {
   // Read language from i18next localStorage key, fallback to "EN"
   const rawLang = localStorage.getItem("i18nextLng") ?? "EN";
-  // i18next sometimes stores "en-US" — normalize to just the 2-letter code uppercased
   const language = rawLang.split("-")[0].toUpperCase();
-
+  console.log("payload", payload);
   return {
     FirstName: payload.ocr.FirstName || "",
     MiddleName: payload.ocr.MiddleName || "",
     Email: payload.ocr.Email || "",
     LastName: payload.ocr.LastName || "",
 
-    Gender: payload.ocr.Gender?.toLowerCase() === "male" ? "Male" : "Female",
+    // ── Fixed: no longer defaults to "Female" when gender is empty ──────────
+    Gender: resolveGender(payload.ocr.Gender),
 
-    BirthDate: formatDate(payload.ocr.BirthDate),
+    // ── Fixed: BirthDate is already formatted by useOCR — pass it as-is ─────
+    // Calling formatDate() here a second time was corrupting the value.
+    BirthDate: payload.ocr.BirthDate || "",
 
     Address: payload.ocr.Address || "",
-    Language: language, // ← from i18next
-
+    Language: language,
     Nationality: payload.ocr.Nationality || "",
 
     FaceFrontPhoto_b64: payload.images.selfie || "",
@@ -139,8 +149,8 @@ export function transformToBackendPayload(
 
     MSISDNType: "Standard",
     MSISDN: msisdn,
-
     MobileMoney_Registration: false,
+
     IdDocFontPhoto_b64: payload.images.IdDocFontPhoto_b64 || "",
     IdDocRearPhoto_b64: payload.images.IdDocRearPhoto_b64 || "",
   };

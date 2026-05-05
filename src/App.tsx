@@ -1,4 +1,6 @@
-import { useRef, useState, useMemo, useCallback } from "react";
+// src/App.tsx
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import Webcam from "react-webcam";
 
@@ -16,6 +18,7 @@ import {
   docVideoConstraints,
   steps,
 } from "./lib/constants/kyc.constants";
+import { loadSession, saveSession, startExpiryWatcher } from "./lib/services/session.service";
 
 import Header from "./components/layout/Header";
 import Stepper from "./components/layout/Stepper";
@@ -29,12 +32,17 @@ import ReviewStep from "./components/steps/ReviewStep";
 
 import { LanguageSwitcher } from "./components/layout/LanguageSwitcher";
 import { transformToBackendPayload } from "./utils/image";
+import { useSessionTimers } from "./hooks/useSessionTimers";
 
 export default function App(): JSX.Element {
   const selfieWebcamRef = useRef<Webcam | null>(null);
   const docWebcamRef = useRef<Webcam | null>(null);
 
-  // ── flow & error ──────────────────────────────────────────────────
+  // ── Rehydration guard ─────────────────────────────────────────────────────
+  // Prevents save-watchers from overwriting restored session data on mount.
+  const isRehydrating = useRef(true);
+
+  // ── flow & error ──────────────────────────────────────────────────────────
   const {
     stepIndex,
     activeStep,
@@ -48,10 +56,10 @@ export default function App(): JSX.Element {
     resetFlow,
   } = useKYCFlow();
 
-  // ── model loading ─────────────────────────────────────────────────
+  // ── model loading ─────────────────────────────────────────────────────────
   const { modelsLoaded } = useModels(pushError);
 
-  // ── liveness ─────────────────────────────────────────────────────
+  // ── liveness ──────────────────────────────────────────────────────────────
   const {
     phase,
     landmarkStatus,
@@ -71,28 +79,63 @@ export default function App(): JSX.Element {
     challengeCount: 3,
   });
 
-  // ── selfie ────────────────────────────────────────────────────────
+  // src/App.tsx — updated hook destructuring + rehydration block only
+  // Everything else stays identical to the previous version.
 
+  // ── selfie — destructure setFaceSidePhoto ────────────────────────────────────
   const {
     selfieImage,
     faceSidePhoto,
-    captureStatus, // ← NEW: CaptureStatus object
+    captureStatus,
     captureSelfie,
     captureFaceSidePhoto,
     resetSelfie,
     setSelfieImage,
+    setFaceSidePhoto, // ← add this
   } = useSelfie({
     webcamRef: selfieWebcamRef,
     livenessDone,
-    yawEstimate: landmarkStatus.yawEstimate, // ← NEW: pass live yaw
-    faceQualityOk: landmarkStatus.qualityOk, // ← NEW: pass live quality
-    faceDetected: landmarkStatus.faceDetected, // ← NEW: pass live detection
+    yawEstimate: landmarkStatus.yawEstimate,
+    faceQualityOk: landmarkStatus.qualityOk,
+    faceDetected: landmarkStatus.faceDetected,
     pushError,
     clearError,
     nextStep,
   });
 
-  // ── document ──────────────────────────────────────────────────────
+  // ── Rehydrate on mount ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const s = loadSession();
+
+    if (s) {
+      if (s.msisdn) setMsisdn(s.msisdn);
+      if (s.selfieImage) setSelfieImage(s.selfieImage);
+      if (s.faceSidePhoto) setFaceSidePhoto(s.faceSidePhoto); // ← add this
+
+      rehydrateDocument({
+        documentImage: s.documentImage,
+        documentBackImage: s.documentBackImage,
+        documentQuality: s.documentQuality,
+        documentBackQuality: s.documentBackQuality,
+      });
+
+      rehydrateOCR({
+        fields: s.fields,
+        mrzValid: s.mrzValid,
+        mrzMessage: s.mrzMessage,
+      });
+
+      rehydrateFaceMatch({ faceMatch: s.faceMatch });
+    }
+
+    requestAnimationFrame(() => {
+      isRehydrating.current = false;
+    });
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── document ──────────────────────────────────────────────────────────────
   const {
     documentImage,
     documentQuality,
@@ -106,10 +149,11 @@ export default function App(): JSX.Element {
     handleDocumentBackUpload,
     saveDocumentBlobLocally,
     saveDocumentBackBlobLocally,
+    rehydrateDocument,
     resetDocument,
   } = useDocument({ docWebcamRef, pushError, clearError });
 
-  // ── OCR & MRZ ─────────────────────────────────────────────────────
+  // ── OCR & MRZ ─────────────────────────────────────────────────────────────
   const {
     fields,
     setFields,
@@ -117,14 +161,16 @@ export default function App(): JSX.Element {
     mrzMessage,
     busy: ocrBusy,
     runOCRAndMRZ,
+    rehydrateOCR,
     resetOCR,
   } = useOCR({ documentImage, pushError, clearError, nextStep });
 
-  // ── face match ────────────────────────────────────────────────────
+  // ── face match ────────────────────────────────────────────────────────────
   const {
     faceMatch,
     busy: matchBusy,
     runFaceMatch,
+    rehydrateFaceMatch,
     resetFaceMatch,
   } = useFaceMatch({
     selfieImage,
@@ -134,11 +180,104 @@ export default function App(): JSX.Element {
     nextStep,
   });
 
-  // ── MSISDN ────────────────────────────────────────────────────────
+  const timers = useSessionTimers();
+  // ── MSISDN ────────────────────────────────────────────────────────────────
   const [msisdn, setMsisdn] = useState("");
   const [isEligible, setIsEligible] = useState<boolean | null>(null);
 
-  // ── payload ───────────────────────────────────────────────────────
+  // ── Rehydrate on mount (runs once, before watchers activate) ─────────────
+  useEffect(() => {
+    const s = loadSession();
+
+    if (s) {
+      if (s.msisdn) setMsisdn(s.msisdn);
+      if (s.selfieImage) setSelfieImage(s.selfieImage);
+
+      rehydrateDocument({
+        documentImage: s.documentImage,
+        documentBackImage: s.documentBackImage,
+        documentQuality: s.documentQuality,
+        documentBackQuality: s.documentBackQuality,
+      });
+
+      rehydrateOCR({
+        fields: s.fields,
+        mrzValid: s.mrzValid,
+        mrzMessage: s.mrzMessage,
+      });
+
+      rehydrateFaceMatch({ faceMatch: s.faceMatch });
+    }
+
+    // Allow save-watchers to start firing after this tick.
+    // requestAnimationFrame ensures all the setState calls above have
+    // been batched and committed before we lift the guard.
+    requestAnimationFrame(() => {
+      isRehydrating.current = false;
+    });
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount only
+
+  // ── Auto-save watchers ────────────────────────────────────────────────────
+  // Each watcher skips the first render while rehydration is in progress.
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ msisdn });
+  }, [msisdn]);
+
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ selfieImage });
+  }, [selfieImage]);
+
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ faceSidePhoto });
+  }, [faceSidePhoto]);
+
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ documentImage });
+  }, [documentImage]);
+
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ documentBackImage });
+  }, [documentBackImage]);
+
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ documentQuality });
+  }, [documentQuality]);
+
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ documentBackQuality });
+  }, [documentBackQuality]);
+
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ fields });
+  }, [fields]);
+
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ mrzValid, mrzMessage });
+  }, [mrzValid, mrzMessage]);
+
+  useEffect(() => {
+    if (isRehydrating.current) return;
+    saveSession({ faceMatch });
+  }, [faceMatch]);
+  // Inside App() component, after all hooks
+
+  useEffect(() => {
+    const cleanup = startExpiryWatcher();
+    return cleanup;
+  }, []);
+
+  // ── payload ───────────────────────────────────────────────────────────────
   const internalPayload = useMemo(
     () =>
       buildPayload({
@@ -178,8 +317,7 @@ export default function App(): JSX.Element {
     [internalPayload, msisdn],
   );
 
-  
-  // ── reset all ─────────────────────────────────────────────────────
+  // ── reset all ─────────────────────────────────────────────────────────────
   const handleReset = () =>
     resetFlow(() => {
       resetSelfie();
@@ -191,7 +329,7 @@ export default function App(): JSX.Element {
       setIsEligible(null);
     });
 
-  // ── export payload ────────────────────────────────────────────────
+  // ── export payload ────────────────────────────────────────────────────────
   const exportPayloadFile = () => {
     const blob = new Blob([JSON.stringify(backendPayload, null, 2)], {
       type: "application/json",
@@ -204,10 +342,10 @@ export default function App(): JSX.Element {
     URL.revokeObjectURL(url);
   };
 
-  // ── render ────────────────────────────────────────────────────────
+  // ── render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen px-20 bg-[#a11775] flex justify-center flex-col text-slate-100">
-      <LanguageSwitcher />
+      <LanguageSwitcher timers={timers} />
       <div className="mx-auto max-w-7xl flex flex-col justify-center sm:py-10 py-3">
         <Header
           modelsLoaded={modelsLoaded}

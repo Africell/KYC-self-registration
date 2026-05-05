@@ -1,7 +1,8 @@
 import registeredUsers from "../../mock/registeredUsers.json";
 import { apiGenerateOTP, apiValidateOTP } from "../api/kyc.api";
+import { clearOTPTokenFromStorage, createSession } from "./session.service";
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export type CheckResult = "REGISTERED" | "ELIGIBLE" | "INVALID";
 
@@ -9,20 +10,41 @@ export type OTPResult =
   | { ok: true }
   | { ok: false; reason: "WRONG_CODE" | "EXPIRED" | "MAX_ATTEMPTS" };
 
-// ── Constants ──────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-const TOKEN_STORAGE_KEY = "kyc_otp_token";
+const OTP_TOKEN_KEY = "kyc_otp_token";
 
-// ── OTP session (memory only for expiry) ───────────────────────────────────
+// ── Interfaces ────────────────────────────────────────────────────────────────
 
 interface OTPSession {
   msisdn: string;
   expiresAt: number;
 }
 
+interface StoredOTPToken {
+  token: string;
+  expiresAt: number;
+}
+
+// ── Restore activeSession from localStorage on page load ──────────────────────
+// Rebuilds the in-memory session from the persisted token so the timer
+// and verifyOTP survive a page refresh.
+
 let activeSession: OTPSession | null = null;
 
-// ── Utils ─────────────────────────────────────────────────────────────────
+try {
+  const raw = localStorage.getItem(OTP_TOKEN_KEY);
+  if (raw) {
+    const stored = JSON.parse(raw) as StoredOTPToken;
+    if (stored.expiresAt && Date.now() < stored.expiresAt) {
+      activeSession = { msisdn: "", expiresAt: stored.expiresAt };
+    }
+  }
+} catch {
+  // ignore — corrupted storage
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
 
 export function normalizeMSISDN(raw: string): string {
   return raw.replace(/^\+/, "").replace(/\s/g, "");
@@ -32,40 +54,48 @@ export function isValidE164(msisdn: string): boolean {
   return /^\+?[1-9]\d{6,14}$/.test(msisdn.trim());
 }
 
-// ── Storage helpers (ONLY TOKEN STRING) ────────────────────────────────────
+// ── Storage helpers ───────────────────────────────────────────────────────────
 
-function saveToken(token: string): void {
-  console.log("💾 Saving token (string only)");
-  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+function saveToken(token: string, expiresAt: number): void {
+  const stored: StoredOTPToken = { token, expiresAt };
+  console.log("💾 Saving token with expiresAt:", new Date(expiresAt).toString());
+  localStorage.setItem(OTP_TOKEN_KEY, JSON.stringify(stored));
 }
 
 function loadToken(): string | null {
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-
-  console.log("📦 Loaded token:", token);
-
-  return token;
+  try {
+    const raw = localStorage.getItem(OTP_TOKEN_KEY);
+    if (!raw) return null;
+    const stored: StoredOTPToken = JSON.parse(raw);
+    if (Date.now() > stored.expiresAt) {
+      console.log("⏰ OTP token expired, removing");
+      clearOTPTokenFromStorage();
+      return null;
+    }
+    console.log("📦 Loaded token, expires:", new Date(stored.expiresAt).toString());
+    return stored.token;
+  } catch {
+    return null;
+  }
 }
 
 function removeToken(): void {
   console.log("🧹 Removing token");
-  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  clearOTPTokenFromStorage();
 }
 
-// ── Registration check ─────────────────────────────────────────────────────
+// ── Registration check ────────────────────────────────────────────────────────
 
 export function checkMSISDN(msisdn: string): CheckResult {
   if (!isValidE164(msisdn)) return "INVALID";
-
   const normalized = normalizeMSISDN(msisdn);
   const exists = registeredUsers.some(
-    (u) => normalizeMSISDN(u.msisdn) === normalized
+    (u) => normalizeMSISDN(u.msisdn) === normalized,
   );
-
   return exists ? "REGISTERED" : "ELIGIBLE";
 }
 
-// ── Generate OTP ───────────────────────────────────────────────────────────
+// ── Generate OTP ──────────────────────────────────────────────────────────────
 
 export async function generateOTP(msisdn: string): Promise<void> {
   const normalized = normalizeMSISDN(msisdn);
@@ -75,46 +105,42 @@ export async function generateOTP(msisdn: string): Promise<void> {
     throw new Error(data.StatusDescription ?? "OTP generation failed");
   }
 
-  const token = data.Data.Token.Token;
-  const ttlMs = data.Data.Token.TokenValidity * 1000;
-
+  const token      = data.Data.Token.Token;
+  const ttlMs      = data.Data.Token.TokenValidity * 1000;
   const serverTime = new Date(data.StatusDate).getTime();
-  const expiresAt = serverTime + ttlMs;
+  const expiresAt  = serverTime + ttlMs;
 
-  console.log("🧠 expiresAt:", new Date(expiresAt).toString());
+  console.log("🧠 OTP expiresAt:", new Date(expiresAt).toString());
 
-  // ✅ Save ONLY token
-  saveToken(token);
+  // 1. Persist OTP token with its expiresAt — survives page refresh
+  saveToken(token, expiresAt);
 
-  // ✅ Keep expiry ONLY in memory
-  activeSession = {
-    msisdn: normalized,
-    expiresAt,
-  };
+  // 2. Create KYC session anchored to the exact same expiresAt.
+  //    Both timers are born together with an identical expiry.
+  createSession({ msisdn: normalized }, expiresAt);
+
+  // 3. Keep activeSession in memory for this tab
+  activeSession = { msisdn: normalized, expiresAt };
 }
 
-// ── Timer ──────────────────────────────────────────────────────────────────
+// ── Timer ─────────────────────────────────────────────────────────────────────
 
 export function getOTPSecondsLeft(): number {
   if (!activeSession) return 0;
-
-  return Math.max(
-    0,
-    Math.ceil((activeSession.expiresAt - Date.now()) / 1000)
-  );
+  return Math.max(0, Math.ceil((activeSession.expiresAt - Date.now()) / 1000));
 }
 
-// ── Attempts ───────────────────────────────────────────────────────────────
+// ── Attempts ──────────────────────────────────────────────────────────────────
 
 export function getOTPAttemptsLeft(): number {
   return activeSession ? 3 : 0;
 }
 
-// ── Verify OTP ─────────────────────────────────────────────────────────────
+// ── Verify OTP ────────────────────────────────────────────────────────────────
 
 export async function verifyOTP(
   msisdn: string,
-  otp: string
+  otp: string,
 ): Promise<OTPResult> {
   if (!activeSession) {
     return { ok: false, reason: "EXPIRED" };
@@ -137,8 +163,6 @@ export async function verifyOTP(
 
   if (data.StatusCode === 200 && data.Status === "successful") {
     console.log("✅ OTP verified");
-    // activeSession = null;
-    // removeToken();
     return { ok: true };
   }
 
@@ -159,7 +183,7 @@ export async function verifyOTP(
   return { ok: false, reason: "WRONG_CODE" };
 }
 
-// ── Clear session ──────────────────────────────────────────────────────────
+// ── Clear session ─────────────────────────────────────────────────────────────
 
 export function clearOTP(): void {
   activeSession = null;

@@ -1,7 +1,9 @@
 // src/hooks/useKYCFlow.ts
-import { useCallback, useState } from "react";
+
+import { useCallback, useEffect, useState } from "react";
 import { steps } from "../lib/constants/kyc.constants";
-import type { AppError } from "../types/kyc";
+import { loadSession, saveSession, clearSession } from "../lib/services/session.service";
+import type { AppError, StepKey } from "../types/kyc";
 
 interface UseKYCFlowReturn {
   stepIndex: number;
@@ -16,10 +18,30 @@ interface UseKYCFlowReturn {
   resetFlow: (extras?: () => void) => void;
 }
 
+function resolveInitialIndex(): number {
+  const session = loadSession();
+  if (!session) return 0;
+  const idx = steps.findIndex((s) => s.key === session.stepKey);
+  return idx >= 0 ? idx : 0;
+}
+
 export function useKYCFlow(): UseKYCFlowReturn {
-  const [stepIndex, setStepIndex] = useState(0);
-  const [error, setError]         = useState<AppError | null>(null);
-  const [agreed, setAgreed]       = useState(false);
+  const [stepIndex, setStepIndex] = useState(resolveInitialIndex);
+  const [error, setError] = useState<AppError | null>(null);
+  const [agreed, setAgreedState] = useState(() => {
+    return loadSession()?.agreed ?? false;
+  });
+
+  // Persist step key whenever stepIndex changes
+  useEffect(() => {
+    const key = steps[stepIndex]?.key as StepKey;
+    if (key) saveSession({ stepKey: key });
+  }, [stepIndex]);
+
+  const setAgreed = useCallback((v: boolean) => {
+    setAgreedState(v);
+    saveSession({ agreed: v });
+  }, []);
 
   const pushError = useCallback((scope: string, message: string) => {
     setError({ scope, message });
@@ -37,17 +59,22 @@ export function useKYCFlow(): UseKYCFlowReturn {
     setStepIndex((prev) => Math.max(prev - 1, 0));
   }, [clearError]);
 
-  // accepts an optional extras callback so callers can reset their own state
-  const resetFlow = useCallback((extras?: () => void) => {
-    clearError();
-    setStepIndex(0);
-    setAgreed(false);
-    extras?.();
-  }, [clearError]);
+  const resetFlow = useCallback(
+    (extras?: () => void) => {
+      clearError();
+      clearSession();
+      setStepIndex(0);
+      setAgreedState(false);
+      extras?.();
+    },
+    [clearError],
+  );
+
+  const activeStep = steps[stepIndex] ?? steps[0];
 
   return {
     stepIndex,
-    activeStep: steps[stepIndex],
+    activeStep,
     error,
     agreed,
     setAgreed,

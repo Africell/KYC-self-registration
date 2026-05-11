@@ -108,11 +108,12 @@ function mapApiFields(
   const middleName = nameParts.slice(1).join(" ");
 
   return {
+    IdType: "",  // not derivable from MRZ; user selects in the form step
     FirstName: firstName,
     LastName: parsed_data.surname ?? "",
     MiddleName: middleName,
-    Email: "", // not in MRZ
-    Address: "", // not in MRZ
+    Email: "",
+    Address: "",
     IdDocSerialNumber: parsed_data.document_number ?? "",
     Nationality: parsed_data.nationality ?? "",
     BirthDate: parsed_data.birth_date ? formatDate(parsed_data.birth_date) : "",
@@ -240,7 +241,9 @@ export function useOCR({
   // ── Rehydrate ─────────────────────────────────────────────────────────────
   const rehydrateOCR = useCallback(
     (s: Pick<KYCSession, "fields" | "mrzValid" | "mrzMessage">) => {
-      if (s.fields) setFields(s.fields);
+      // Merge with initialFields so sessions predating new fields (e.g. IdType)
+      // are backfilled with safe defaults rather than leaving undefined values.
+      if (s.fields) setFields({ ...initialFields, ...s.fields });
       if (s.mrzValid !== undefined) setMrzValid(s.mrzValid);
       if (s.mrzMessage) setMrzMessage(s.mrzMessage);
     },

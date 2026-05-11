@@ -1,11 +1,12 @@
+// Step keys aligned with requirements section 8.2 step layout
 export type StepKey =
   | "msisdn"
-  | "consent"
-  | "selfie"
+  | "form"
   | "document"
-  | "ocr"
-  | "match"
-  | "review";
+  | "selfie"
+  | "signature"
+  | "consent"
+  | "acknowledgment";
 
 export type Step = {
   key: StepKey;
@@ -17,6 +18,7 @@ export type AppError = {
   message: string;
 };
 
+// Kept for hooks not yet removed from codebase
 export type LivenessChallenge =
   | "center"
   | "lookLeft"
@@ -76,9 +78,10 @@ export type DocumentQuality = {
   reasons: string[];
 };
 
-// ── OCR ───────────────────────────────────────────────────────────────────────
+// ── Form / OCR fields ─────────────────────────────────────────────────────────
 
 export type ExtractedFields = {
+  IdType: string;           // FR-009: Passport | Voter ID | Driver's License
   FirstName: string;
   MiddleName: string;
   LastName: string;
@@ -107,15 +110,10 @@ export type SubmissionPayload = {
   consentAccepted: boolean;
   capturedAt: string;
   images: {
-    selfie: string;
-    FaceSidePhoto_b64: string;
-    IdDocFontPhoto_b64: string;
+    selfieVideoRef: string;       // in-memory blob URL — not persisted to localStorage
+    IdDocFrontPhoto_b64: string;
     IdDocRearPhoto_b64: string;
-  };
-  liveness: {
-    completed: boolean;
-    completedChallenges: Record<LivenessChallenge, boolean>;
-    finalYawEstimate: number;
+    signaturePhoto_b64: string;
   };
   documentQuality: DocumentQuality | null;
   ocr: ExtractedFields;
@@ -123,7 +121,7 @@ export type SubmissionPayload = {
     valid: boolean | null;
     message: string;
   };
-  faceMatch: FaceMatchResult | null;
+  registrationReference: string;
   readyForBackendPost: boolean;
 };
 
@@ -134,8 +132,8 @@ export interface KYCSession {
   stepKey: StepKey;
   msisdn: string;
   agreed: boolean;
-  selfieImage: string;
-  faceSidePhoto: string;
+  selfieVideoCaptured: boolean;   // video blob is in-memory only; flag persisted
+  signatureImage: string;
   documentImage: string;
   documentBackImage: string;
   documentQuality: DocumentQuality | null;
@@ -143,7 +141,7 @@ export interface KYCSession {
   fields: ExtractedFields;
   mrzValid: boolean | null;
   mrzMessage: string;
-  faceMatch: FaceMatchResult | null;
+  registrationReference: string;
 }
 
 /** A partial update — every key except expiresAt is optional. */

@@ -1,4 +1,10 @@
 // src/components/steps/MSISDNStep.tsx
+//
+// FR-002  Mobile number entry and format validation
+// FR-003  OTP generation and delivery
+// FR-004  OTP verification
+// FR-005  Registration check AFTER successful OTP — not before
+// FR-006  Already-registered handling: guidance screen, USSD code, shop advice
 
 import { useState, useCallback, useMemo } from "react";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
@@ -13,7 +19,7 @@ import OTPSection from "./OTPSection";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Phase = "IDLE" | "REGISTERED" | "OTP_SENT" | "VERIFIED";
+type Phase = "IDLE" | "OTP_SENT" | "VERIFIED" | "REGISTERED";
 
 interface MSISDNStepProps {
   msisdn: string;
@@ -28,6 +34,7 @@ interface ErrorState {
 }
 
 const EMPTY_ERRORS: ErrorState = { input: "", otp: "", captcha: "" };
+
 function RecaptchaDisclaimer() {
   return (
     <p className="text-center text-xs text-slate-600">
@@ -65,12 +72,8 @@ export default function MSISDNStep({
   const [phase, setPhase] = useState<Phase>("IDLE");
   const [errors, setErrors] = useState<ErrorState>(EMPTY_ERRORS);
   const [loading, setLoading] = useState(false);
-  // Server-provided OTP TTL in seconds — drives the OTPSection countdown timer
   const [otpTotalSeconds, setOtpTotalSeconds] = useState(0);
-  // Server-authoritative remaining attempts — received in verifyOTP response
-  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(
-    undefined,
-  );
+  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
 
   const setError = useCallback(
     (field: keyof ErrorState, message: string) =>
@@ -88,10 +91,7 @@ export default function MSISDNStep({
   const executeCaptcha = useCallback(
     async (action: string): Promise<string | null> => {
       if (!executeRecaptcha) {
-        setError(
-          "captcha",
-          "Security check not ready yet. Please wait a moment.",
-        );
+        setError("captcha", "Security check not ready yet. Please wait a moment.");
         return null;
       }
       return executeRecaptcha(action);
@@ -107,21 +107,18 @@ export default function MSISDNStep({
       if (cleaned.includes("+")) cleaned = "+" + cleaned.replace(/\+/g, "");
       setMsisdn(cleaned);
       clearErrors();
-      if (phase === "REGISTERED") setPhase("IDLE");
     },
-    [phase, setMsisdn, clearErrors],
+    [setMsisdn, clearErrors],
   );
 
   // ── Send OTP ──────────────────────────────────────────────────────────────
+  // FR-002: validate number format first; FR-003: only send after validation
 
   const handleContinue = useCallback(async () => {
     clearErrors();
 
     if (!isValidE164(msisdn)) {
-      setError(
-        "input",
-        "Enter a valid international number (e.g. +243970000001)",
-      );
+      setError("input", "Enter a valid international number (e.g. +243970000001)");
       return;
     }
 
@@ -130,13 +127,6 @@ export default function MSISDNStep({
 
     setLoading(true);
     try {
-      const result = checkMSISDN(msisdn);
-      if (result === "REGISTERED") {
-        setPhase("REGISTERED");
-        setError("input", "This number is already registered.");
-        return;
-      }
-
       const validitySeconds = await generateOTP(msisdn, token);
       setOtpTotalSeconds(validitySeconds);
       setAttemptsLeft(undefined);
@@ -155,6 +145,7 @@ export default function MSISDNStep({
   }, [msisdn, executeCaptcha, clearErrors, setError]);
 
   // ── Verify OTP ────────────────────────────────────────────────────────────
+  // FR-004: verify OTP; FR-005: check registration status AFTER successful verification
 
   const handleVerify = useCallback(
     async (code: string) => {
@@ -168,6 +159,12 @@ export default function MSISDNStep({
         const result = await verifyOTP(msisdn, code, token);
 
         if (result.ok) {
+          // FR-005: registration check happens after OTP success, not before send
+          const registrationStatus = checkMSISDN(msisdn);
+          if (registrationStatus === "REGISTERED") {
+            setPhase("REGISTERED");
+            return;
+          }
           setPhase("VERIFIED");
           nextStep();
           return;
@@ -178,7 +175,6 @@ export default function MSISDNStep({
         if (result.reason === "WRONG_CODE") {
           setAttemptsLeft(result.attemptsRemaining);
         } else {
-          // EXPIRED or MAX_ATTEMPTS — no more attempts are relevant
           setAttemptsLeft(undefined);
           setPhase("IDLE");
         }
@@ -210,9 +206,7 @@ export default function MSISDNStep({
       console.error("[MSISDNStep] OTP resend error:", err);
       setError(
         "otp",
-        err instanceof Error
-          ? err.message
-          : "Failed to resend code. Please try again.",
+        err instanceof Error ? err.message : "Failed to resend code. Please try again.",
       );
       return otpTotalSeconds;
     } finally {
@@ -220,7 +214,7 @@ export default function MSISDNStep({
     }
   }, [msisdn, otpTotalSeconds, executeCaptcha, clearErrors, setError]);
 
-  // ── Go back to phone input ────────────────────────────────────────────────
+  // ── Back to phone input ───────────────────────────────────────────────────
 
   const handleBack = useCallback(() => {
     clearOTP();
@@ -230,22 +224,21 @@ export default function MSISDNStep({
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  const showPhoneInput = phase === "IDLE" || phase === "REGISTERED";
-  const showOTPInput = phase === "OTP_SENT";
-
   return (
     <section className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold">Verify your number</h2>
         <p className="mt-1 text-sm text-slate-400">
-          {showOTPInput
+          {phase === "OTP_SENT"
             ? "We sent a code to your number."
+            : phase === "REGISTERED"
+            ? "Registration status confirmed."
             : "Enter your mobile number to get started."}
         </p>
       </div>
 
-      {/* ── Phone input ─────────────────────────────────────────────────── */}
-      {showPhoneInput && (
+      {/* ── Phone input ──────────────────────────────────────────────────── */}
+      {phase === "IDLE" && (
         <div className="space-y-3">
           <label className="block text-xs uppercase tracking-widest text-slate-500">
             Mobile number
@@ -301,8 +294,8 @@ export default function MSISDNStep({
         </div>
       )}
 
-      {/* ── OTP entry ───────────────────────────────────────────────────── */}
-      {showOTPInput && (
+      {/* ── OTP entry ────────────────────────────────────────────────────── */}
+      {phase === "OTP_SENT" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-400">
@@ -333,6 +326,71 @@ export default function MSISDNStep({
           />
 
           <RecaptchaDisclaimer />
+        </div>
+      )}
+
+      {/* ── Already registered (FR-006) ───────────────────────────────────── */}
+      {phase === "REGISTERED" && (
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-amber-700/50 bg-amber-900/15 p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl shrink-0">ℹ️</span>
+              <div>
+                <h3 className="text-lg font-semibold text-amber-200">
+                  SIM Already Registered
+                </h3>
+                <p className="mt-1 text-sm text-slate-300">
+                  This SIM is already registered. To check the ID details linked to
+                  your line, dial{" "}
+                  <span className="font-mono font-semibold text-amber-300">*XXX#</span>.
+                  If the details are incorrect, please visit the nearest Africell shop
+                  with your valid ID.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 space-y-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              What you can do
+            </p>
+            <ul className="space-y-3 text-sm text-slate-300">
+              <li className="flex items-start gap-3">
+                <span className="mt-0.5 shrink-0 h-5 w-5 rounded-full bg-cyan-900/60 border border-cyan-700/50 text-cyan-400 flex items-center justify-center text-xs font-bold">
+                  1
+                </span>
+                <span>
+                  Dial{" "}
+                  <span className="font-mono text-slate-100 bg-slate-800 px-1.5 py-0.5 rounded text-xs">
+                    *XXX#
+                  </span>{" "}
+                  to check the ID details currently linked to your SIM
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-0.5 shrink-0 h-5 w-5 rounded-full bg-cyan-900/60 border border-cyan-700/50 text-cyan-400 flex items-center justify-center text-xs font-bold">
+                  2
+                </span>
+                <span>
+                  If the ID details are incorrect, visit the nearest{" "}
+                  <strong className="text-slate-200">Africell shop</strong> with a
+                  valid ID document to have them corrected
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <button
+            onClick={() => {
+              clearOTP();
+              clearErrors();
+              setMsisdn("");
+              setPhase("IDLE");
+            }}
+            className="w-full rounded-2xl border border-slate-700 px-5 py-3 text-slate-200 hover:bg-slate-800 transition-colors"
+          >
+            Use a different number
+          </button>
         </div>
       )}
     </section>

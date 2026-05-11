@@ -1,16 +1,15 @@
-
 import type { Step, ExtractedFields, KYCSession } from "../../types/kyc";
 
-// ── Flow steps ────────────────────────────────────────────────────────────────
+// ── Flow steps (section 8.2 of requirements) ─────────────────────────────────
 
 export const steps: Step[] = [
-  { key: "msisdn", label: "Mobile Number" },
-  { key: "consent", label: "Consent" },
-  { key: "selfie", label: "Selfie & Liveness" },
-  { key: "document", label: "Document Capture" },
-  { key: "ocr", label: "OCR & MRZ" },
-  { key: "match", label: "Face Match" },
-  { key: "review", label: "Review Payload" },
+  { key: "msisdn",         label: "Mobile Number" },
+  { key: "form",           label: "KYC Details" },
+  { key: "document",       label: "ID Photo" },
+  { key: "selfie",         label: "Selfie Video" },
+  { key: "signature",      label: "Signature" },
+  { key: "consent",        label: "Consent & Submit" },
+  { key: "acknowledgment", label: "Submitted" },
 ];
 
 // ── Camera constraints ────────────────────────────────────────────────────────
@@ -31,17 +30,27 @@ export const docVideoConstraints: MediaTrackConstraints = {
 
 export const STORAGE_KEYS = {
   SESSION: "kyc_session",
-
   OTP_TOKEN: "kyc_otp_token",
 } as const;
 
-// ── OTP config ────────────────────────────────────────────────────────────────
+// ── OTP config (FR-003) ───────────────────────────────────────────────────────
 
 export const OTP_MAX_ATTEMPTS = 3;
+
+// ── Selfie video config (FR-015) ──────────────────────────────────────────────
+
+export const SELFIE_VIDEO_MAX_SECONDS = 10;
+export const SELFIE_VIDEO_MAX_MB = 20;
+export const SELFIE_VIDEO_ACCEPTED_MIME = [
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+] as const;
 
 // ── Field / session defaults ──────────────────────────────────────────────────
 
 export const initialFields: ExtractedFields = {
+  IdType: "",
   FirstName: "",
   MiddleName: "",
   LastName: "",
@@ -60,8 +69,8 @@ export const SESSION_DEFAULTS: Omit<KYCSession, "expiresAt"> = {
   stepKey: "msisdn",
   msisdn: "",
   agreed: false,
-  selfieImage: "",
-  faceSidePhoto: "",
+  selfieVideoCaptured: false,
+  signatureImage: "",
   documentImage: "",
   documentBackImage: "",
   documentQuality: null,
@@ -69,5 +78,5 @@ export const SESSION_DEFAULTS: Omit<KYCSession, "expiresAt"> = {
   fields: initialFields,
   mrzValid: null,
   mrzMessage: "",
-  faceMatch: null,
+  registrationReference: "",
 };

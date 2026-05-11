@@ -1,17 +1,16 @@
 // src/App.tsx
+//
+// Orchestrates the 7-step KYC self-registration flow per requirements:
+//   msisdn → form → document → selfie → signature → consent → acknowledgment
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import Webcam from "react-webcam";
 
 import { useKYCFlow } from "./hooks/useKYCFlow";
-import { useModels } from "./hooks/useModels";
 import { useSessionTimers } from "./hooks/useSessionTimers";
-import { useSelfie } from "./hooks/useSelfie";
 import { useDocument } from "./hooks/useDocument";
 import { useOCR } from "./hooks/useOCR";
-import { useFaceMatch } from "./hooks/useFaceMatch";
-import { useFaceLiveness } from "./hooks/useFaceLiveness";
 
 import { buildPayload } from "./lib/services/payload.service";
 import {
@@ -19,8 +18,9 @@ import {
   saveSession,
   startExpiryWatcher,
 } from "./lib/services/session.service";
+import { apiSubmitSIMRegistration } from "./lib/api/kyc.api";
+import { getStoredToken } from "./lib/services/msisdn.service";
 import {
-  videoConstraints,
   docVideoConstraints,
   steps,
 } from "./lib/constants/kyc.constants";
@@ -28,20 +28,18 @@ import {
 import Header from "./components/layout/Header";
 import Stepper from "./components/layout/Stepper";
 import MSISDNStep from "./components/steps/MSISDNStep";
-import ConsentStep from "./components/steps/ConsentStep";
-import SelfieStep from "./components/steps/selfieStep/SelfieStep";
 import OCRStep from "./components/steps/OCRStep";
-import FaceMatchStep from "./components/steps/FaceMatchStep";
-import ReviewStep from "./components/steps/ReviewStep";
+import DocumentStep from "./components/steps/document/DocumentStep";
+import SelfieVideoStep from "./components/steps/SelfieVideoStep";
+import SignatureStep from "./components/steps/Signaturestep";
+import ConsentStep from "./components/steps/ConsentStep";
+import AcknowledgmentStep from "./components/steps/AcknowledgmentStep";
 import { LanguageSwitcher } from "./components/layout/LanguageSwitcher";
 
 import { transformToBackendPayload } from "./utils/image";
 import type { SessionPatch } from "./lib/services/session.service";
-import DocumentStep from "./components/steps/document/DocumentStep";
 
 // ── Auto-save helper ──────────────────────────────────────────────────────────
-// Consolidates the rehydration guard so it isn't copy-pasted across 10 effects.
-// Only saves once the mount rehydration has completed (isRehydrating.current = false).
 
 function useSaveSession(
   patch: SessionPatch,
@@ -51,9 +49,6 @@ function useSaveSession(
   useEffect(() => {
     if (isRehydrating.current) return;
     saveSession(patch);
-    // deps drives when this fires — patch is intentionally not in the array
-    // because we only want to save when the underlying values change, not
-    // when the object reference changes on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }
@@ -61,10 +56,7 @@ function useSaveSession(
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function App(): JSX.Element {
-  const selfieWebcamRef = useRef<Webcam | null>(null);
   const docWebcamRef = useRef<Webcam | null>(null);
-
-  // Prevents auto-save watchers from overwriting restored session data on mount.
   const isRehydrating = useRef(true);
 
   // ── Flow ──────────────────────────────────────────────────────────────────
@@ -81,57 +73,36 @@ export default function App(): JSX.Element {
     resetFlow,
   } = useKYCFlow();
 
-  // ── Models ────────────────────────────────────────────────────────────────
-  const { modelsLoaded } = useModels(pushError);
-
   // ── Session timers ────────────────────────────────────────────────────────
-  // Reads only from localStorage — no dependency on any React state.
   const timers = useSessionTimers();
 
   // ── MSISDN ────────────────────────────────────────────────────────────────
-  // Declared before the rehydration effect so setMsisdn is available when it runs.
   const [msisdn, setMsisdn] = useState("");
 
-  // ── Liveness ──────────────────────────────────────────────────────────────
-  const {
-    phase,
-    landmarkStatus,
-    livenessCompleted,
-    livenessChallenge,
-    livenessDone,
-    challengeSequence,
-    challengeIndex,
-    challengeTimeLeft,
-    startChallenges,
-    retryChallenge,
-    resetLiveness,
-  } = useFaceLiveness({
-    webcamRef: selfieWebcamRef,
-    modelsLoaded,
-    active: activeStep.key === "selfie",
-    challengeCount: 3,
-  });
+  // ── Selfie video — in-memory only, not persisted to localStorage ──────────
+  const [selfieVideoBlob, setSelfieVideoBlob] = useState<Blob | null>(null);
+  const [selfieVideoUrl, setSelfieVideoUrl] = useState("");
 
-  // ── Selfie ────────────────────────────────────────────────────────────────
-  const {
-    selfieImage,
-    faceSidePhoto,
-    captureStatus,
-    captureSelfie,
-    captureFaceSidePhoto,
-    resetSelfie,
-    setSelfieImage,
-    setFaceSidePhoto,
-  } = useSelfie({
-    webcamRef: selfieWebcamRef,
-    livenessDone,
-    yawEstimate: landmarkStatus.yawEstimate,
-    faceQualityOk: landmarkStatus.qualityOk,
-    faceDetected: landmarkStatus.faceDetected,
-    pushError,
-    clearError,
-    nextStep,
-  });
+  const setSelfieVideo = (blob: Blob | null, url: string) => {
+    setSelfieVideoBlob(blob);
+    setSelfieVideoUrl(url);
+    saveSession({ selfieVideoCaptured: !!blob });
+  };
+
+  // ── Signature ─────────────────────────────────────────────────────────────
+  const [signatureImage, setSignatureImageState] = useState("");
+
+  const setSignatureImage = (dataUrl: string) => {
+    setSignatureImageState(dataUrl);
+    saveSession({ signatureImage: dataUrl });
+  };
+
+  // ── Registration reference ────────────────────────────────────────────────
+  const [registrationReference, setRegistrationReference] = useState("");
+
+  // ── Submit state ──────────────────────────────────────────────────────────
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   // ── Document ──────────────────────────────────────────────────────────────
   const {
@@ -151,44 +122,24 @@ export default function App(): JSX.Element {
     resetDocument,
   } = useDocument({ docWebcamRef, pushError, clearError });
 
-  // ── OCR & MRZ ─────────────────────────────────────────────────────────────
+  // ── OCR (optional — pre-fills form fields when document is captured) ──────
   const {
     fields,
     setFields,
     mrzValid,
     mrzMessage,
-    busy: ocrBusy,
-    runOCRAndMRZ,
     rehydrateOCR,
     resetOCR,
-  } = useOCR({ documentImage, pushError, clearError, nextStep });
-
-  // ── Face match ────────────────────────────────────────────────────────────
-  const {
-    faceMatch,
-    busy: matchBusy,
-    runFaceMatch,
-    rehydrateFaceMatch,
-    resetFaceMatch,
-  } = useFaceMatch({
-    selfieImage,
-    documentImage,
-    pushError,
-    clearError,
-    nextStep,
-  });
+  } = useOCR({ documentImage, pushError, clearError, nextStep: () => {} });
 
   // ── Rehydration ───────────────────────────────────────────────────────────
-  // Single effect, single loadSession() call.
-  // requestAnimationFrame ensures all batched setState calls above have
-  // committed before auto-save watchers are allowed to fire.
   useEffect(() => {
     const s = loadSession();
 
     if (s) {
       if (s.msisdn) setMsisdn(s.msisdn);
-      if (s.selfieImage) setSelfieImage(s.selfieImage);
-      if (s.faceSidePhoto) setFaceSidePhoto(s.faceSidePhoto);
+      if (s.signatureImage) setSignatureImageState(s.signatureImage);
+      if (s.registrationReference) setRegistrationReference(s.registrationReference);
 
       rehydrateDocument({
         documentImage: s.documentImage,
@@ -202,8 +153,6 @@ export default function App(): JSX.Element {
         mrzValid: s.mrzValid,
         mrzMessage: s.mrzMessage,
       });
-
-      rehydrateFaceMatch({ faceMatch: s.faceMatch });
     }
 
     requestAnimationFrame(() => {
@@ -214,59 +163,44 @@ export default function App(): JSX.Element {
   }, []); // mount only
 
   // ── Expiry watcher ────────────────────────────────────────────────────────
-  // Registered immediately after rehydration — cleans up both the KYC session
-  // and the OTP token when their 15-min TTL elapses.
   useEffect(() => startExpiryWatcher(), []);
 
   // ── Auto-save watchers ────────────────────────────────────────────────────
-  // Each patch is saved independently so unrelated state changes don't trigger
-  // a full-session write. The rehydration guard is enforced inside useSaveSession.
   useSaveSession({ msisdn }, isRehydrating, [msisdn]);
-  useSaveSession({ selfieImage }, isRehydrating, [selfieImage]);
-  useSaveSession({ faceSidePhoto }, isRehydrating, [faceSidePhoto]);
   useSaveSession({ documentImage }, isRehydrating, [documentImage]);
   useSaveSession({ documentBackImage }, isRehydrating, [documentBackImage]);
   useSaveSession({ documentQuality }, isRehydrating, [documentQuality]);
   useSaveSession({ documentBackQuality }, isRehydrating, [documentBackQuality]);
   useSaveSession({ fields }, isRehydrating, [fields]);
-  useSaveSession({ mrzValid, mrzMessage }, isRehydrating, [
-    mrzValid,
-    mrzMessage,
-  ]);
-  useSaveSession({ faceMatch }, isRehydrating, [faceMatch]);
+  useSaveSession({ mrzValid, mrzMessage }, isRehydrating, [mrzValid, mrzMessage]);
+  useSaveSession({ registrationReference }, isRehydrating, [registrationReference]);
 
   // ── Payload ───────────────────────────────────────────────────────────────
   const internalPayload = useMemo(
     () =>
       buildPayload({
         consentAccepted: agreed,
-        selfieImage,
-        faceSidePhoto,
+        selfieVideoRef: selfieVideoUrl,
         documentImage,
         documentBackImage,
-        livenessDone,
-        livenessCompleted,
-        finalYawEstimate: landmarkStatus.yawEstimate,
+        signatureImage,
         documentQuality,
         fields,
         mrzValid,
         mrzMessage,
-        faceMatch,
+        registrationReference,
       }),
     [
       agreed,
-      selfieImage,
-      faceSidePhoto,
+      selfieVideoUrl,
       documentImage,
       documentBackImage,
-      livenessDone,
-      livenessCompleted,
-      landmarkStatus.yawEstimate,
+      signatureImage,
       documentQuality,
       fields,
       mrzValid,
       mrzMessage,
-      faceMatch,
+      registrationReference,
     ],
   );
 
@@ -275,29 +209,50 @@ export default function App(): JSX.Element {
     [internalPayload, msisdn],
   );
 
+  // ── Submit ────────────────────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    setSubmitError("");
+    setSubmitLoading(true);
+
+    try {
+      const token = getStoredToken();
+      if (!token) throw new Error("Session expired. Please verify your number again.");
+
+      const response = await apiSubmitSIMRegistration(backendPayload, token);
+
+      // Extract reference from response if available
+      const ref =
+        (response as { Data?: { RegistrationReference?: string } })?.Data
+          ?.RegistrationReference ??
+        `REG-${Date.now()}`;
+
+      setRegistrationReference(ref);
+      saveSession({ registrationReference: ref });
+      nextStep();
+    } catch (err) {
+      console.error("[App] Submission error:", err);
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Submission failed. Please try again.",
+      );
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   // ── Reset ─────────────────────────────────────────────────────────────────
   const handleReset = () =>
     resetFlow(() => {
-      resetSelfie();
       resetDocument();
       resetOCR();
-      resetFaceMatch();
-      resetLiveness();
       setMsisdn("");
+      setSignatureImageState("");
+      setSelfieVideoBlob(null);
+      setSelfieVideoUrl("");
+      setRegistrationReference("");
+      setSubmitError("");
     });
-
-  // ── Export payload ────────────────────────────────────────────────────────
-  const exportPayloadFile = () => {
-    const blob = new Blob([JSON.stringify(backendPayload, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `kyc-payload-${Date.now()}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -306,22 +261,22 @@ export default function App(): JSX.Element {
 
       <div className="mx-auto max-w-7xl flex flex-col justify-center sm:py-10 py-3">
         <Header
-          modelsLoaded={modelsLoaded}
+          modelsLoaded={true}
           activeStepLabel={activeStep.label}
         />
         <Stepper steps={steps} stepIndex={stepIndex} />
 
         {error && (
           <div className="mb-6 rounded-2xl border border-[#ee7d00] bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-            <strong className="mr-2 uppercase tracking-wide">
-              {error.scope}
-            </strong>
+            <strong className="mr-2 uppercase tracking-wide">{error.scope}</strong>
             {error.message}
           </div>
         )}
 
         <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] w-full">
           <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-black/20">
+
+            {/* Step 1: Mobile number + OTP */}
             {activeStep.key === "msisdn" && (
               <MSISDNStep
                 msisdn={msisdn}
@@ -330,38 +285,17 @@ export default function App(): JSX.Element {
               />
             )}
 
-            {activeStep.key === "consent" && (
-              <ConsentStep
-                agreed={agreed}
-                setAgreed={setAgreed}
+            {/* Step 2: KYC details form */}
+            {activeStep.key === "form" && (
+              <OCRStep
+                fields={fields}
+                setFields={setFields}
                 nextStep={nextStep}
-                modelsLoaded={modelsLoaded}
-              />
-            )}
-
-            {activeStep.key === "selfie" && (
-              <SelfieStep
-                selfieWebcamRef={selfieWebcamRef}
-                videoConstraints={videoConstraints}
-                landmarkStatus={landmarkStatus}
-                livenessCompleted={livenessCompleted}
-                livenessDone={livenessDone}
-                captureSelfie={captureSelfie}
                 prevStep={prevStep}
-                selfieImage={selfieImage}
-                faceSidePhoto={faceSidePhoto}
-                captureFaceSidePhoto={captureFaceSidePhoto}
-                livenessChallenge={livenessChallenge}
-                challengeSequence={challengeSequence}
-                challengeIndex={challengeIndex}
-                challengeTimeLeft={challengeTimeLeft}
-                phase={phase}
-                startChallenges={startChallenges}
-                retryChallenge={retryChallenge}
-                captureStatus={captureStatus}
               />
             )}
 
+            {/* Step 3: ID photo capture */}
             {activeStep.key === "document" && (
               <DocumentStep
                 documentPreviewMode={documentPreviewMode}
@@ -373,45 +307,54 @@ export default function App(): JSX.Element {
                 handleDocumentBackUpload={handleDocumentBackUpload}
                 documentImage={documentImage}
                 documentBackImage={documentBackImage}
-                runOCRAndMRZ={runOCRAndMRZ}
+                nextStep={nextStep}
                 prevStep={prevStep}
                 docVideoConstraints={docVideoConstraints}
                 documentQuality={documentQuality}
                 documentBackQuality={documentBackQuality}
                 saveDocumentBlobLocally={saveDocumentBlobLocally}
                 saveDocumentBackBlobLocally={saveDocumentBackBlobLocally}
-                busy={ocrBusy}
               />
             )}
 
-            {activeStep.key === "ocr" && (
-              <OCRStep
-                fields={fields}
-                setFields={setFields}
-                runFaceMatch={runFaceMatch}
-                prevStep={prevStep}
-                mrzValid={mrzValid}
-                mrzMessage={mrzMessage}
-                busy={matchBusy}
-              />
-            )}
-
-            {activeStep.key === "match" && (
-              <FaceMatchStep
-                selfieImage={selfieImage}
-                documentImage={documentImage}
-                faceMatch={faceMatch}
-                prevStep={prevStep}
+            {/* Step 4: Liveness selfie video */}
+            {activeStep.key === "selfie" && (
+              <SelfieVideoStep
+                selfieVideoBlob={selfieVideoBlob}
+                selfieVideoUrl={selfieVideoUrl}
+                setSelfieVideo={setSelfieVideo}
                 nextStep={nextStep}
+                prevStep={prevStep}
               />
             )}
 
-            {activeStep.key === "review" && (
-              <ReviewStep
-                internalPayload={internalPayload}
-                backendPayload={backendPayload}
+            {/* Step 5: Signature photo */}
+            {activeStep.key === "signature" && (
+              <SignatureStep
+                signatureImage={signatureImage}
+                setSignatureImage={setSignatureImage}
+                nextStep={nextStep}
                 prevStep={prevStep}
-                exportPayloadFile={exportPayloadFile}
+              />
+            )}
+
+            {/* Step 6: Consent and submit */}
+            {activeStep.key === "consent" && (
+              <ConsentStep
+                agreed={agreed}
+                setAgreed={setAgreed}
+                onSubmit={handleSubmit}
+                prevStep={prevStep}
+                submitLoading={submitLoading}
+                submitError={submitError}
+              />
+            )}
+
+            {/* Step 7: Acknowledgment */}
+            {activeStep.key === "acknowledgment" && (
+              <AcknowledgmentStep
+                msisdn={msisdn}
+                registrationReference={registrationReference}
                 resetFlow={handleReset}
               />
             )}

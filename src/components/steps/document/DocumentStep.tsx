@@ -1,4 +1,5 @@
 // src/components/steps/document/DocumentStep.tsx
+// FR-013  ID Photo — mandatory, JPG/JPEG/PNG, quality check
 
 import Webcam from "react-webcam";
 import type { DocumentQuality } from "../../../types/kyc";
@@ -22,9 +23,8 @@ interface DocumentStepProps {
   handleDocumentBackUpload:    (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   saveDocumentBlobLocally:     () => Promise<void>;
   saveDocumentBackBlobLocally: () => Promise<void>;
-  runOCRAndMRZ:                () => Promise<void>;
+  nextStep:                    () => void;
   prevStep:                    () => void;
-  busy:                        boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -44,18 +44,17 @@ export default function DocumentStep({
   handleDocumentBackUpload,
   saveDocumentBlobLocally,
   saveDocumentBackBlobLocally,
-  runOCRAndMRZ,
+  nextStep,
   prevStep,
-  busy,
 }: DocumentStepProps) {
   return (
     <section className="space-y-5">
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div>
-        <h2 className="text-2xl font-semibold">Document capture</h2>
+        <h2 className="text-2xl font-semibold">ID photo</h2>
         <p className="mt-1 text-sm text-slate-300">
-          Capture or upload a clear passport, national ID, or driver licence.
-          A passport data page gives the best MRZ results.
+          Capture or upload a clear photo of your identity document (front side
+          required). Accepted formats: JPG, PNG.
         </p>
       </div>
 
@@ -77,7 +76,7 @@ export default function DocumentStep({
         ))}
       </div>
 
-      {/* ── Front side ────────────────────────────────────────────────────── */}
+      {/* ── Front side (required) ─────────────────────────────────────────── */}
       <DocumentSide
         side="front"
         previewMode={documentPreviewMode}
@@ -90,9 +89,12 @@ export default function DocumentStep({
         onDownload={() => void saveDocumentBlobLocally()}
       />
 
-      {/* ── Back side (revealed after front is captured) ───────────────────── */}
+      {/* ── Back side (optional, revealed after front) ────────────────────── */}
       {documentImage && (
         <div className="border-t border-slate-800 pt-5">
+          <p className="mb-3 text-xs uppercase tracking-wide text-slate-500">
+            Back side (optional)
+          </p>
           <DocumentSide
             side="back"
             previewMode={documentPreviewMode}
@@ -117,20 +119,13 @@ export default function DocumentStep({
         </button>
 
         <button
-          onClick={() => void runOCRAndMRZ()}
-          disabled={!documentImage || busy}
+          onClick={nextStep}
+          disabled={!documentImage}
           className="rounded-2xl bg-cyan-500 px-5 py-3 font-medium text-slate-950
             hover:bg-cyan-400 transition-colors
             disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {busy ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" />
-              Running OCR…
-            </span>
-          ) : (
-            "Run OCR & MRZ"
-          )}
+          Continue
         </button>
       </div>
     </section>

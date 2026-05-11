@@ -5,7 +5,6 @@ import * as faceapi from "face-api.js";
 import { getBestFaceDescriptor, getFaceMatchVerdict } from "../lib/services/face.service";
 import { dataUrlToImage } from "../utils/image";
 import type { FaceMatchResult } from "../types/kyc";
-import type { KYCSession } from "../lib/services/session.service";
 
 interface UseFaceMatchProps {
   selfieImage: string;
@@ -19,7 +18,7 @@ interface UseFaceMatchReturn {
   faceMatch: FaceMatchResult | null;
   busy: boolean;
   runFaceMatch: () => Promise<void>;
-  rehydrateFaceMatch: (s: Pick<KYCSession, "faceMatch">) => void;
+  rehydrateFaceMatch: (s: { faceMatch: FaceMatchResult | null }) => void;
   resetFaceMatch: () => void;
 }
 
@@ -76,7 +75,7 @@ export function useFaceMatch({
 
   // ── rehydrate ─────────────────────────────────────────────────────────────
   const rehydrateFaceMatch = useCallback(
-    (s: Pick<KYCSession, "faceMatch">) => {
+    (s: { faceMatch: FaceMatchResult | null }) => {
       if (s.faceMatch) setFaceMatch(s.faceMatch);
     },
     [],

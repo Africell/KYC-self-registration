@@ -50,19 +50,19 @@ export interface SIMRegistrationPayload {
   Language: string;
   Email: string;
   Nationality: string;
-  FaceFrontPhoto_b64: string;
-  FaceSidePhoto_b64: string;
   IdDocType: string;
   IdDocSerialNumber: string;
   NationalIdNumber: string;
-  IdDocFontPhoto_b64: string;
+  IdDocFrontPhoto_b64: string;
   IdDocRearPhoto_b64: string;
+  SignaturePhoto_b64: string;
   SIMType: string;
   ICC: string;
   IMSI: string;
   MSISDNType: string;
   MSISDN: string;
   MobileMoney_Registration: boolean;
+  RegistrationReference?: string;
 }
 
 export interface SIMRegistrationResponse {

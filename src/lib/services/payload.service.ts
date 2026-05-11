@@ -1,66 +1,54 @@
 import type {
   DocumentQuality,
   ExtractedFields,
-  FaceMatchResult,
   SubmissionPayload,
 } from "../../types/kyc";
-import type { LivenessChallenge } from "../constants/kyc.constants";
 
 export function buildPayload(args: {
   consentAccepted: boolean;
-  selfieImage: string;
-  faceSidePhoto: string;
+  selfieVideoRef: string;
   documentImage: string;
   documentBackImage: string;
-  livenessDone: boolean;
-  livenessCompleted: Record<LivenessChallenge, boolean>;
-  finalYawEstimate: number;
+  signatureImage: string;
   documentQuality: DocumentQuality | null;
   fields: ExtractedFields;
   mrzValid: boolean | null;
   mrzMessage: string;
-  faceMatch: FaceMatchResult | null;
+  registrationReference: string;
 }): SubmissionPayload {
   const {
     consentAccepted,
-    selfieImage,
-    faceSidePhoto,
+    selfieVideoRef,
     documentImage,
     documentBackImage,
-    livenessDone,
-    livenessCompleted,
-    finalYawEstimate,
+    signatureImage,
     documentQuality,
     fields,
     mrzValid,
     mrzMessage,
-    faceMatch,
+    registrationReference,
   } = args;
 
   const readyForBackendPost = Boolean(
     consentAccepted &&
-    selfieImage &&
-    documentImage &&
-    livenessDone &&
-    fields.rawOCRText &&
-    faceMatch &&
-    documentQuality?.looksUsefulForOCR,
+      selfieVideoRef &&
+      documentImage &&
+      signatureImage &&
+      fields.FirstName.trim() &&
+      fields.LastName.trim() &&
+      fields.IdDocSerialNumber.trim() &&
+      fields.Gender &&
+      fields.Address.trim(),
   );
-  console.log("documentImage?", documentImage);
-  console.log("documentBackImage", documentBackImage);
+
   return {
     consentAccepted,
     capturedAt: new Date().toISOString(),
     images: {
-      selfie: selfieImage,
-      FaceSidePhoto_b64: faceSidePhoto,
-      IdDocFontPhoto_b64: documentImage,
+      selfieVideoRef,
+      IdDocFrontPhoto_b64: documentImage,
       IdDocRearPhoto_b64: documentBackImage,
-    },
-    liveness: {
-      completed: livenessDone,
-      completedChallenges: livenessCompleted,
-      finalYawEstimate,
+      signaturePhoto_b64: signatureImage,
     },
     documentQuality,
     ocr: fields,
@@ -68,7 +56,7 @@ export function buildPayload(args: {
       valid: mrzValid,
       message: mrzMessage,
     },
-    faceMatch,
+    registrationReference,
     readyForBackendPost,
   };
 }

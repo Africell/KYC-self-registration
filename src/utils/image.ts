@@ -114,32 +114,21 @@ export function transformToBackendPayload(
   payload: SubmissionPayload,
   msisdn: string,
 ) {
-  // Read language from i18next localStorage key, fallback to "EN"
   const rawLang = localStorage.getItem("i18nextLng") ?? "EN";
   const language = rawLang.split("-")[0].toUpperCase();
-  console.log("payload", payload);
+
   return {
     FirstName: payload.ocr.FirstName || "",
     MiddleName: payload.ocr.MiddleName || "",
     Email: payload.ocr.Email || "",
     LastName: payload.ocr.LastName || "",
-
-    // ── Fixed: no longer defaults to "Female" when gender is empty ──────────
     Gender: resolveGender(payload.ocr.Gender),
-
-    // ── Fixed: BirthDate is already formatted by useOCR — pass it as-is ─────
-    // Calling formatDate() here a second time was corrupting the value.
     BirthDate: payload.ocr.BirthDate || "",
-
     Address: payload.ocr.Address || "",
     Language: language,
     Nationality: payload.ocr.Nationality || "",
 
-    FaceFrontPhoto_b64: payload.images.selfie || "",
-    FaceSidePhoto_b64: payload.images.FaceSidePhoto_b64 || "",
-
-    IdDocType: "National ID",
-
+    IdDocType: payload.ocr.IdType || "Passport",
     IdDocSerialNumber: payload.ocr.IdDocSerialNumber || "",
     NationalIdNumber: payload.ocr.IdDocSerialNumber || "",
 
@@ -151,7 +140,10 @@ export function transformToBackendPayload(
     MSISDN: msisdn,
     MobileMoney_Registration: false,
 
-    IdDocFontPhoto_b64: payload.images.IdDocFontPhoto_b64 || "",
+    IdDocFrontPhoto_b64: payload.images.IdDocFrontPhoto_b64 || "",
     IdDocRearPhoto_b64: payload.images.IdDocRearPhoto_b64 || "",
+    SignaturePhoto_b64: payload.images.signaturePhoto_b64 || "",
+
+    RegistrationReference: payload.registrationReference || "",
   };
 }

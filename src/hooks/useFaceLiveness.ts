@@ -11,7 +11,8 @@ import {
   computeFaceSizeRatio,
 } from "../lib/services/face.service";
 import { waitForVideoReady } from "../lib/services/video.service";
-import { buildChallengeSequence, CHALLENGE_CONFIGS } from "../lib/challenges";
+import { playSuccessBeep } from "../utils/audio";
+import { buildChallengeSequence, CHALLENGE_CONFIGS, TURN_YAW_TARGET } from "../lib/challenges";
 import {
   areGestureModelsLoaded,
   computePitchFromPose,
@@ -38,8 +39,12 @@ type UseFaceLivenessProps = {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CHALLENGE_TIMEOUT_MS  = 5_000;
-const DETECTION_INTERVAL_MS = 650;
+const CHALLENGE_TIMEOUT_MS  = 8_000;  // 8 s gives enough time without pressure
+const DETECTION_INTERVAL_MS = 350;    // faster feedback (was 650 ms)
+
+// How many consecutive passing frames are required before a challenge is
+// accepted. Prevents a single stray frame from triggering completion.
+const PASS_STREAK_REQUIRED = 2;
 
 // ── Nod detection tuning ──────────────────────────────────────────────────────
 // Window of 5 frames at 650 ms = ~3.25 s of history — tight enough to capture
@@ -112,6 +117,9 @@ export function useFaceLiveness({
   const intervalRef        = useRef<number | null>(null);
   const challengeTimerRef  = useRef<number | null>(null);
   const pitchWindow             = useRef<number[]>([]);
+  // Consecutive frames where the current challenge's pass condition was met.
+  // Resets to 0 on any failing frame or when a new challenge starts.
+  const passStreakRef           = useRef(0);
   // Captures the face-width ratio at the moment moveCloser challenge starts.
   // null = baseline not yet taken for this challenge instance.
   const moveCloserBaselineRef   = useRef<number | null>(null);
@@ -216,6 +224,7 @@ export function useFaceLiveness({
     (freshSequence: LivenessChallenge[]) => {
       clearChallengeTimer();
       pitchWindow.current = [];
+      passStreakRef.current = 0;
       moveCloserBaselineRef.current = null;
 
       setChallengeSequence(freshSequence);
@@ -259,6 +268,7 @@ export function useFaceLiveness({
     ) => {
       clearChallengeTimer();
       pitchWindow.current = [];
+      passStreakRef.current = 0;
       moveCloserBaselineRef.current = null;
 
       if (!passed) {
@@ -496,64 +506,79 @@ export function useFaceLiveness({
 
       const config = CHALLENGE_CONFIGS[currentChallenge];
       let hint     = config.instruction;
-      let passed   = false;
+      let framePass = false;  // did THIS frame meet the pass condition?
 
       switch (currentChallenge) {
         case "center":
-          if (Math.abs(yaw) < 0.08 && qualityOk) {
-            passed = true;
-            hint   = "✓ Face centered!";
+          if (Math.abs(yaw) < 0.10 && qualityOk) {
+            framePass = true;
+            hint = passStreakRef.current > 0
+              ? `✓ Hold still… (${passStreakRef.current + 1}/${PASS_STREAK_REQUIRED})`
+              : "Face centered — hold still";
           } else {
-            hint = Math.abs(yaw) < 0.08
-              ? "Hold steady, checking quality…"
-              : "Face the camera directly.";
+            hint = Math.abs(yaw) >= 0.10
+              ? "Face the camera directly"
+              : "Hold still — checking quality…";
           }
           break;
 
-        case "lookLeft":
-          if (yaw > 0.12 && qualityOk) { passed = true; hint = "✓ Good!"; }
+        case "lookLeft": {
+          const pct = Math.min(100, Math.round(Math.max(0, yaw) / TURN_YAW_TARGET * 100));
+          framePass = yaw > TURN_YAW_TARGET && qualityOk;
+          if (framePass) {
+            hint = passStreakRef.current > 0 ? "✓ Hold that position!" : "✓ Good turn — hold it!";
+          } else {
+            hint = pct > 45
+              ? `Almost there — keep turning left (${pct}%)`
+              : "Turn your head to the left";
+          }
           break;
+        }
 
-        case "lookRight":
-          if (yaw < -0.12 && qualityOk) { passed = true; hint = "✓ Good!"; }
+        case "lookRight": {
+          const pct = Math.min(100, Math.round(Math.max(0, -yaw) / TURN_YAW_TARGET * 100));
+          framePass = yaw < -TURN_YAW_TARGET && qualityOk;
+          if (framePass) {
+            hint = passStreakRef.current > 0 ? "✓ Hold that position!" : "✓ Good turn — hold it!";
+          } else {
+            hint = pct > 45
+              ? `Almost there — keep turning right (${pct}%)`
+              : "Turn your head to the right";
+          }
           break;
+        }
 
         case "moveCloser": {
           const ratio = computeFaceSizeRatio(detection, video.videoWidth || 720);
-
-          // Capture baseline on the first frame of this challenge.
-          // We intentionally do NOT reset this on a bad frame — if the face
-          // briefly disappears, we keep the last known baseline so the user
-          // doesn't have to restart their movement.
           if (moveCloserBaselineRef.current === null) {
             moveCloserBaselineRef.current = ratio;
           }
+          const baseline    = moveCloserBaselineRef.current;
+          const movedBy     = ratio - baseline;
+          const progressPct = Math.min(100, Math.round(movedBy / CLOSER_DELTA * 100));
 
-          const baseline  = moveCloserBaselineRef.current;
-          const movedBy   = ratio - baseline;
-          const pct       = Math.round(ratio * 100);
-          const targetPct = Math.round((baseline + CLOSER_DELTA) * 100);
-
-          if (movedBy >= CLOSER_DELTA && ratio >= CLOSER_MIN_RATIO) {
-            passed = true;
-            hint   = "✓ Close enough!";
+          framePass = movedBy >= CLOSER_DELTA && ratio >= CLOSER_MIN_RATIO;
+          if (framePass) {
+            hint = "✓ Close enough — hold still!";
           } else {
-            hint = `Move closer — you are at ${pct}%, need ${targetPct}%`;
+            hint = progressPct > 40
+              ? `Almost there — ${progressPct}% closer, keep going`
+              : "Move your face closer to the camera";
           }
           break;
         }
 
         case "raiseLeftHand":
           if (gestureFrame && isRaisingLeftHand(gestureFrame.pose)) {
-            passed = true;
-            hint   = "✓ Left hand raised!";
+            framePass = true;
+            hint = "✓ Left hand raised!";
           }
           break;
 
         case "raiseRightHand":
           if (gestureFrame && isRaisingRightHand(gestureFrame.pose)) {
-            passed = true;
-            hint   = "✓ Right hand raised!";
+            framePass = true;
+            hint = "✓ Right hand raised!";
           }
           break;
 
@@ -561,14 +586,24 @@ export function useFaceLiveness({
           if (gestureFrame) {
             const pitch = computePitchFromPose(gestureFrame.pose);
             if (pitch !== null && detectNod(pitch)) {
-              passed = true;
-              hint   = "✓ Head nod detected!";
+              framePass = true;
+              hint = "✓ Head nod detected!";
             }
           }
           break;
       }
 
-      if (passed) advanceChallengeRef.current(true, currentIndex, currentChallenge);
+      // Streak logic: require PASS_STREAK_REQUIRED consecutive passing frames
+      // before marking the challenge complete. Resets on any failing frame.
+      if (framePass) {
+        passStreakRef.current += 1;
+        if (passStreakRef.current >= PASS_STREAK_REQUIRED) {
+          playSuccessBeep();
+          advanceChallengeRef.current(true, currentIndex, currentChallenge);
+        }
+      } else {
+        passStreakRef.current = 0;
+      }
 
       setLandmarkStatus({ faceDetected: true, yawEstimate: Number(yaw.toFixed(4)), qualityOk, hint, faceBox });
     } catch (err) {

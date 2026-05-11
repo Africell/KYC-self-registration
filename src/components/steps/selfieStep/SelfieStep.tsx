@@ -8,6 +8,7 @@ import type { LandmarkStatus, LivenessChallenge } from "../../../types/kyc";
 import { CHALLENGE_CONFIGS } from "../../../lib/challenges";
 
 import { TIMER_RADIUS, TIMER_CIRC } from "./selfie.constants";
+import { TURN_YAW_TARGET } from "../../../lib/challenges";
 import { CaptureProgressBar } from "./overlays/CaptureProgressBar";
 import { StatusBanner } from "./overlays/StatusBanner";
 import { CaptureFlash } from "./overlays/Captureflash";
@@ -34,6 +35,7 @@ interface SelfieStepProps {
   phase: LivenessPhase;
   startChallenges: () => void;
   retryChallenge: () => void;
+  retakeSelfie: () => void;
   captureStatus: CaptureStatus;
 }
 
@@ -57,6 +59,7 @@ export default function SelfieStep({
   phase,
   startChallenges,
   retryChallenge,
+  retakeSelfie,
   captureStatus,
 }: SelfieStepProps) {
   const currentConfig = CHALLENGE_CONFIGS[livenessChallenge];
@@ -267,6 +270,34 @@ export default function SelfieStep({
                 <div className="text-base font-semibold text-white truncate">
                   {currentConfig.icon} {currentConfig.label}
                 </div>
+                {/* Live turn-progress bar for head-turn challenges */}
+                {(livenessChallenge === "lookLeft" || livenessChallenge === "lookRight") && (
+                  <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-150"
+                      style={{
+                        width: `${Math.min(100, (Math.abs(landmarkStatus.yawEstimate) / TURN_YAW_TARGET) * 100)}%`,
+                        background: Math.abs(landmarkStatus.yawEstimate) >= TURN_YAW_TARGET
+                          ? "#34d399"   // emerald when at target
+                          : "#22d3ee",  // cyan while building up
+                      }}
+                    />
+                  </div>
+                )}
+                {/* Move-closer progress bar */}
+                {livenessChallenge === "moveCloser" && landmarkStatus.hint.includes("%") && (
+                  <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-cyan-400 transition-all duration-150"
+                      style={{
+                        width: (() => {
+                          const m = landmarkStatus.hint.match(/(\d+)%/);
+                          return m ? `${Math.min(100, parseInt(m[1]))}%` : "0%";
+                        })(),
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -516,6 +547,16 @@ export default function SelfieStep({
         >
           Back
         </button>
+
+        {/* Retake button: visible whenever both photos are already captured */}
+        {capturePhase === "complete" && selfieImage && (
+          <button
+            onClick={retakeSelfie}
+            className="rounded-2xl border border-amber-500/50 bg-amber-500/10 px-5 py-3 text-sm font-medium text-amber-300 hover:bg-amber-500/20 transition-colors"
+          >
+            Retake photos
+          </button>
+        )}
 
         {!isCapturePhase && (
           <button

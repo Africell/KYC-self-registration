@@ -132,8 +132,10 @@ export type SubmissionPayload = {
 export interface KYCSession {
   expiresAt: number;
   stepKey: StepKey;
+  maxStepReached: number;
   msisdn: string;
   agreed: boolean;
+  docType: string;
   selfieImage: string;
   faceSidePhoto: string;
   documentImage: string;

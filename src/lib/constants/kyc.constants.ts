@@ -58,8 +58,10 @@ export const initialFields: ExtractedFields = {
 
 export const SESSION_DEFAULTS: Omit<KYCSession, "expiresAt"> = {
   stepKey: "msisdn",
+  maxStepReached: 0,
   msisdn: "",
   agreed: false,
+  docType: "",
   selfieImage: "",
   faceSidePhoto: "",
   documentImage: "",

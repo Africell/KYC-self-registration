@@ -1,12 +1,27 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+
+interface ConsentStepProps {
+  agreed: boolean;
+  setAgreed: (v: boolean) => void;
+  nextStep: () => void;
+  modelsLoaded: boolean;
+}
 
 export default function ConsentStep({
   agreed,
   setAgreed,
   nextStep,
   modelsLoaded,
-}: any) {
+}: ConsentStepProps) {
   const { t } = useTranslation();
+  // Local checkbox state — only committed to the session when Continue is clicked.
+  const [checked, setChecked] = useState(agreed);
+
+  function handleContinue() {
+    setAgreed(true);
+    nextStep();
+  }
 
   return (
     <section className="space-y-5">
@@ -19,19 +34,22 @@ export default function ConsentStep({
         <p>{t("consent_desc_2")}</p>
       </div>
 
-      <label className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-200">
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-4 text-sm text-slate-200 hover:border-slate-600 transition-colors">
         <input
           type="checkbox"
-          checked={agreed}
-          onChange={(e) => setAgreed(e.target.checked)}
+          checked={checked}
+          onChange={(e) => setChecked(e.target.checked)}
+          className="mt-0.5 accent-cyan-500"
         />
         <span>{t("consent_checkbox")}</span>
       </label>
 
       <button
-        onClick={nextStep}
-        disabled={!agreed || !modelsLoaded}
-        className="rounded-2xl bg-cyan-500 px-5 py-3"
+        onClick={handleContinue}
+        disabled={!checked || !modelsLoaded}
+        className="rounded-2xl bg-cyan-500 px-5 py-3 font-medium text-slate-950
+          hover:bg-cyan-400 transition-colors
+          disabled:cursor-not-allowed disabled:opacity-40"
       >
         {t("continue")}
       </button>

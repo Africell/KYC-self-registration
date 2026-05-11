@@ -70,12 +70,14 @@ export default function App(): JSX.Element {
   // ── Flow ──────────────────────────────────────────────────────────────────
   const {
     stepIndex,
+    maxStepReached,
     activeStep,
     error,
     agreed,
     setAgreed,
     nextStep,
     prevStep,
+    goToStep,
     pushError,
     clearError,
     resetFlow,
@@ -91,6 +93,9 @@ export default function App(): JSX.Element {
   // ── MSISDN ────────────────────────────────────────────────────────────────
   // Declared before the rehydration effect so setMsisdn is available when it runs.
   const [msisdn, setMsisdn] = useState("");
+
+  // ── Document type ─────────────────────────────────────────────────────────
+  const [docType, setDocType] = useState("");
 
   // ── Liveness ──────────────────────────────────────────────────────────────
   const {
@@ -187,6 +192,7 @@ export default function App(): JSX.Element {
 
     if (s) {
       if (s.msisdn) setMsisdn(s.msisdn);
+      if (s.docType) setDocType(s.docType);
       if (s.selfieImage) setSelfieImage(s.selfieImage);
       if (s.faceSidePhoto) setFaceSidePhoto(s.faceSidePhoto);
 
@@ -222,6 +228,7 @@ export default function App(): JSX.Element {
   // Each patch is saved independently so unrelated state changes don't trigger
   // a full-session write. The rehydration guard is enforced inside useSaveSession.
   useSaveSession({ msisdn }, isRehydrating, [msisdn]);
+  useSaveSession({ docType }, isRehydrating, [docType]);
   useSaveSession({ selfieImage }, isRehydrating, [selfieImage]);
   useSaveSession({ faceSidePhoto }, isRehydrating, [faceSidePhoto]);
   useSaveSession({ documentImage }, isRehydrating, [documentImage]);
@@ -284,6 +291,7 @@ export default function App(): JSX.Element {
       resetFaceMatch();
       resetLiveness();
       setMsisdn("");
+      setDocType("");
     });
 
   // ── Export payload ────────────────────────────────────────────────────────
@@ -309,7 +317,7 @@ export default function App(): JSX.Element {
           modelsLoaded={modelsLoaded}
           activeStepLabel={activeStep.label}
         />
-        <Stepper steps={steps} stepIndex={stepIndex} />
+        <Stepper steps={steps} stepIndex={stepIndex} maxStepReached={maxStepReached} onStepClick={goToStep} />
 
         {error && (
           <div className="mb-6 rounded-2xl border border-[#ee7d00] bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -358,12 +366,15 @@ export default function App(): JSX.Element {
                 phase={phase}
                 startChallenges={startChallenges}
                 retryChallenge={retryChallenge}
+                retakeSelfie={() => { resetSelfie(); resetLiveness(); }}
                 captureStatus={captureStatus}
               />
             )}
 
             {activeStep.key === "document" && (
               <DocumentStep
+                docType={docType}
+                setDocType={setDocType}
                 documentPreviewMode={documentPreviewMode}
                 setDocumentPreviewMode={setDocumentPreviewMode}
                 docWebcamRef={docWebcamRef}

@@ -2,6 +2,10 @@
 
 import type { ChallengeConfig, LivenessChallenge } from "../types/kyc";
 
+// Yaw value (0-1 normalised) the user must reach to pass a head-turn challenge.
+// Shared between the detection logic and the UI progress bar so they stay in sync.
+export const TURN_YAW_TARGET = 0.18;
+
 export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
   center: {
     id: "center",
@@ -64,18 +68,11 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
 
 /**
  * "center" is always first.
- * Then picks `count - 1` random challenges from the pool without repeats.
+ * Remaining challenges are drawn from a reliable pool that only uses face-api.js
+ * (no extra MediaPipe models required — avoids CDN failures and load delays).
  */
-export function buildChallengeSequence(count = 4): LivenessChallenge[] {
-  const pool: LivenessChallenge[] = [
-    "lookLeft",
-    "lookRight",
-    "raiseLeftHand",
-    "raiseRightHand",
-    "nodHead",
-    "moveCloser",
-   
-  ];
+export function buildChallengeSequence(count = 3): LivenessChallenge[] {
+  const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "moveCloser"];
 
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   const picked = shuffled.slice(0, Math.max(1, count - 1));

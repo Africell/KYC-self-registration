@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import * as faceapi from "face-api.js";
 import { loadGestureModels } from "../lib/services/gesture.service";
 
-const MODELS_URL = "/models";
+const MODELS_URL = `${import.meta.env.BASE_URL}models`;
 
 interface UseModelsReturn {
   modelsLoaded: boolean;

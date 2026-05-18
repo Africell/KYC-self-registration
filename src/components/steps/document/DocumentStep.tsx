@@ -29,7 +29,6 @@ const DOC_TYPES = [
   },
 ] as const;
 
-type DocTypeId = (typeof DOC_TYPES)[number]["id"];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

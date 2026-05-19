@@ -79,7 +79,7 @@ export function buildChallengeSequence(
   count = 3,
   previousSequence?: LivenessChallenge[],
 ): LivenessChallenge[] {
-  const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "moveCloser"];
+  const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "moveCloser", "raiseLeftHand", "raiseRightHand", "nodHead"];
   const needed = Math.max(1, count - 1);
 
   let picked: LivenessChallenge[];

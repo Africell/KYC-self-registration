@@ -70,12 +70,31 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
  * "center" is always first.
  * Remaining challenges are drawn from a reliable pool that only uses face-api.js
  * (no extra MediaPipe models required — avoids CDN failures and load delays).
+ *
+ * If previousSequence is supplied the function retries until it produces a
+ * sequence with a different order so the user never sees the exact same
+ * challenge run twice in a row.
  */
-export function buildChallengeSequence(count = 3): LivenessChallenge[] {
+export function buildChallengeSequence(
+  count = 3,
+  previousSequence?: LivenessChallenge[],
+): LivenessChallenge[] {
   const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "moveCloser"];
+  const needed = Math.max(1, count - 1);
 
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  const picked = shuffled.slice(0, Math.max(1, count - 1));
+  let picked: LivenessChallenge[];
+  let attempts = 0;
+
+  do {
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    picked = shuffled.slice(0, needed);
+    attempts++;
+  } while (
+    attempts < 20 &&
+    previousSequence &&
+    previousSequence.length > 1 &&
+    JSON.stringify(["center", ...picked]) === JSON.stringify(previousSequence)
+  );
 
   return ["center", ...picked];
 }

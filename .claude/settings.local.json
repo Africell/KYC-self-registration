@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npx tsc *)",
       "Bash(rm \"c:/Users/layla.abosaad/OneDrive - Africell/Desktop/proj/proj/src/lib/services/ai-extraction.service.ts\")",
-      "Bash(rm \"c:/Users/layla.abosaad/OneDrive - Africell/Desktop/proj/proj/src/lib/loadmodels.ts\")"
+      "Bash(rm \"c:/Users/layla.abosaad/OneDrive - Africell/Desktop/proj/proj/src/lib/loadmodels.ts\")",
+      "Bash(Get-ChildItem \"c:\\\\Users\\\\layla.abosaad\\\\OneDrive - Africell\\\\Desktop\\\\proj\\\\proj\" -File)",
+      "Bash(Select-Object Name)",
+      "PowerShell(cd \"c:\\\\Users\\\\layla.abosaad\\\\OneDrive - Africell\\\\Desktop\\\\proj\\\\proj\"; $env:VITE_UI_BASE_URL=\"https://okapihruat.africell.cd/KYC_WEB/\"; npm run build 2>&1 | Select-Object -Last 20)"
     ]
   }
 }

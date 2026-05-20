@@ -41,6 +41,7 @@ export function mapFieldKey(label: string): keyof ExtractedFields {
       return "BirthDate";
     case "Expiry date":
       return "ExpiryDate";
+    case "Gender":
     case "Sex":
       return "Gender";
     default:

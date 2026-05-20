@@ -39,6 +39,7 @@ import { transformToBackendPayload } from "./utils/image";
 import type { SessionPatch } from "./lib/services/session.service";
 import DocumentStep from "./components/steps/document/DocumentStep";
 import SignatureStep from "./components/steps/Signaturestep";
+import bgOkapi from "./assets/bg-okapi.jpg";
 
 // ── Auto-save helper ──────────────────────────────────────────────────────────
 // Consolidates the rehydration guard so it isn't copy-pasted across 10 effects.
@@ -323,14 +324,19 @@ export default function App(): JSX.Element {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen px-20 bg-[#a11775] flex justify-center flex-col text-slate-100">
-      <LanguageSwitcher timers={timers} />
+    <div className="relative flex justify-center items-center min-h-screen text-slate-100">
+      {/* Fixed background — always viewport-sized, never zooms with content */}
+      <div
+        className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url(${bgOkapi})` }}
+      />
+      <div className="w-full flex flex-col gap-5 max-w-3xl mx-auto px-4 py-6">
+        {/* ── Top bar ───────────────────────────────────────────────────────── */}
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <Header modelsLoaded={modelsLoaded} activeStepLabel={activeStep.label} />
+          <LanguageSwitcher timers={timers} />
+        </div>
 
-      <div className="mx-auto max-w-7xl flex flex-col justify-center sm:py-10 py-3">
-        <Header
-          modelsLoaded={modelsLoaded}
-          activeStepLabel={activeStep.label}
-        />
         <Stepper
           steps={steps}
           stepIndex={stepIndex}
@@ -339,16 +345,15 @@ export default function App(): JSX.Element {
         />
 
         {error && (
-          <div className="mb-6 rounded-2xl border border-[#ee7d00] bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-            <strong className="mr-2 uppercase tracking-wide">
+          <div className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            <strong className="mr-2 uppercase tracking-wide text-amber-300">
               {error.scope}
             </strong>
             {error.message}
           </div>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] w-full">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-black/20">
+        <div className="rounded-3xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-sm p-6 shadow-2xl shadow-black/40">
             {activeStep.key === "msisdn" && (
               <MSISDNStep
                 msisdn={msisdn}
@@ -458,7 +463,6 @@ export default function App(): JSX.Element {
               />
             )}
           </div>
-        </div>
       </div>
     </div>
   );

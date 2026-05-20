@@ -87,11 +87,11 @@ export default function SelfieStep({
   const timerDash = (timerPercent / 100) * TIMER_CIRC;
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3 sm:space-y-4">
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">
+          <h2 className="text-xl sm:text-2xl font-semibold">
             Selfie &amp; Liveness Check
           </h2>
           <p className="mt-1 text-sm text-slate-400">
@@ -127,7 +127,7 @@ export default function SelfieStep({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-2 text-xs text-slate-400 uppercase tracking-widest shrink-0">
+        <div className="self-start sm:self-auto rounded-xl sm:rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs text-slate-400 uppercase tracking-widest shrink-0">
           {isCapturePhase
             ? isSidePhase
               ? "Step 2 / 2 — Side"
@@ -150,16 +150,16 @@ export default function SelfieStep({
       />
 
       {/* ── Main layout ───────────────────────────────────────────────────── */}
-      <div className="grid gap-5 xl:grid-cols-[1fr_300px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         {/* ── Webcam + overlays ────────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-black">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-800 bg-black aspect-3/4 sm:aspect-4/3">
           <Webcam
             ref={selfieWebcamRef}
             audio={false}
             mirrored
             screenshotFormat="image/jpeg"
             videoConstraints={videoConstraints}
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
           />
 
           <CaptureFlash active={flashActive} />
@@ -195,21 +195,21 @@ export default function SelfieStep({
           {/* READY */}
           {phase === "ready" && !isCapturePhase && (
             <div className="absolute inset-0 flex flex-col items-center justify-end bg-transparent pb-6 gap-3">
-              <div className="bg-black/75 backdrop-blur rounded-2xl px-6 py-4 flex flex-col items-center gap-3 mx-4 text-center">
-                <p className="text-base font-semibold text-white">
+              <div className="bg-black/80 backdrop-blur-sm rounded-2xl px-5 py-4 sm:px-6 sm:py-5 flex flex-col items-center gap-3 mx-4 text-center w-full max-w-xs">
+                <p className="text-base sm:text-lg font-semibold text-white">
                   Face Detected!
                 </p>
-                <p className="text-slate-300 text-xs max-w-xs">
+                <p className="text-slate-300 text-xs sm:text-sm">
                   You'll be given{" "}
                   <strong className="text-cyan-300">
                     {challengeSequence.length} quick challenges
                   </strong>
                   . Each has{" "}
-                  <strong className="text-cyan-300">5 seconds</strong>. Ready?
+                  <strong className="text-cyan-300">10 seconds</strong>. Ready?
                 </p>
                 <button
                   onClick={startChallenges}
-                  className="rounded-2xl bg-cyan-500 px-6 py-2 font-semibold text-slate-950 hover:bg-cyan-400 transition-colors text-sm"
+                  className="w-full rounded-2xl bg-cyan-500 px-6 py-3 font-semibold text-slate-950 hover:bg-cyan-400 active:bg-cyan-300 transition-colors text-sm"
                 >
                   I'm Ready →
                 </button>
@@ -219,7 +219,7 @@ export default function SelfieStep({
 
           {/* CHALLENGING */}
           {phase === "challenging" && !isCapturePhase && (
-            <div className="absolute top-0 left-0 right-0 flex items-center gap-3 bg-black/75 backdrop-blur px-4 py-3">
+            <div className="absolute top-0 left-0 right-0 flex items-center gap-3 bg-black/80 backdrop-blur-sm px-3 py-2 sm:px-4 sm:py-3">
               <svg
                 width="48"
                 height="48"
@@ -264,13 +264,12 @@ export default function SelfieStep({
                 </text>
               </svg>
               <div className="flex-1 min-w-0">
-                <div className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">
+                <div className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wide mb-0.5">
                   Challenge {challengeIndex + 1} of {challengeSequence.length}
                 </div>
-                <div className="text-base font-semibold text-white truncate">
+                <div className="text-sm sm:text-base font-semibold text-white truncate">
                   {currentConfig.icon} {currentConfig.label}
                 </div>
-                {/* Live turn-progress bar for head-turn challenges */}
                 {(livenessChallenge === "lookLeft" || livenessChallenge === "lookRight") && (
                   <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
                     <div
@@ -278,13 +277,12 @@ export default function SelfieStep({
                       style={{
                         width: `${Math.min(100, (Math.abs(landmarkStatus.yawEstimate) / TURN_YAW_TARGET) * 100)}%`,
                         background: Math.abs(landmarkStatus.yawEstimate) >= TURN_YAW_TARGET
-                          ? "#34d399"   // emerald when at target
-                          : "#22d3ee",  // cyan while building up
+                          ? "#34d399"
+                          : "#22d3ee",
                       }}
                     />
                   </div>
                 )}
-                {/* Move-closer progress bar */}
                 {livenessChallenge === "moveCloser" && landmarkStatus.hint.includes("%") && (
                   <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
                     <div
@@ -304,15 +302,15 @@ export default function SelfieStep({
 
           {/* TIMEOUT */}
           {phase === "timeout" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-5 px-6 text-center">
-              <div className="text-5xl animate-bounce">⏰</div>
-              <p className="text-2xl font-semibold text-white">Time's Up!</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 gap-4 sm:gap-5 px-6 text-center">
+              <div className="text-4xl sm:text-5xl animate-bounce">⏰</div>
+              <p className="text-xl sm:text-2xl font-semibold text-white">Time's Up!</p>
               <p className="text-slate-300 text-sm max-w-xs">
                 You didn't complete the challenge in time. Let's try again.
               </p>
               <button
                 onClick={retryChallenge}
-                className="mt-2 rounded-2xl bg-amber-500 px-8 py-3 font-semibold text-slate-950 hover:bg-amber-400 transition-colors"
+                className="mt-1 rounded-2xl bg-amber-500 px-8 py-3 min-h-12 font-semibold text-slate-950 hover:bg-amber-400 active:bg-amber-300 transition-colors"
               >
                 Retry Challenges →
               </button>
@@ -338,7 +336,7 @@ export default function SelfieStep({
             <div className="absolute inset-0 flex items-end justify-center pb-6">
               <button
                 onClick={() => void captureFaceSidePhoto()}
-                className="rounded-2xl bg-emerald-500 px-8 py-3 font-semibold text-slate-950 hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-900/40 text-sm"
+                className="rounded-2xl bg-emerald-500 px-8 py-3 min-h-12 font-semibold text-slate-950 hover:bg-emerald-400 active:bg-emerald-300 transition-all shadow-lg shadow-emerald-900/40 text-sm"
               >
                 📸 Capture Side Photo
               </button>
@@ -359,7 +357,7 @@ export default function SelfieStep({
         </div>
 
         {/* ── Right panel ──────────────────────────────────────────────────── */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Liveness: challenge progress list */}
           {!isCapturePhase && (
             <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-300">
@@ -378,7 +376,7 @@ export default function SelfieStep({
                   return (
                     <div
                       key={id}
-                      className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all duration-300 ${
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-300 ${
                         done
                           ? "bg-emerald-950/60 border border-emerald-800/50"
                           : isCurrent
@@ -543,16 +541,15 @@ export default function SelfieStep({
       <div className="flex flex-wrap gap-3">
         <button
           onClick={prevStep}
-          className="rounded-2xl border border-slate-700 px-5 py-3 text-slate-200 hover:bg-slate-800 transition-colors"
+          className="rounded-2xl border border-slate-700 px-5 py-3 min-h-12 text-slate-200 hover:bg-slate-800 active:bg-slate-700 transition-colors"
         >
           Back
         </button>
 
-        {/* Retake button: visible whenever both photos are already captured */}
         {capturePhase === "complete" && selfieImage && (
           <button
             onClick={retakeSelfie}
-            className="rounded-2xl border border-amber-500/50 bg-amber-500/10 px-5 py-3 text-sm font-medium text-amber-300 hover:bg-amber-500/20 transition-colors"
+            className="rounded-2xl border border-amber-500/50 bg-amber-500/10 px-5 py-3 min-h-12 text-sm font-medium text-amber-300 hover:bg-amber-500/20 active:bg-amber-500/30 transition-colors"
           >
             Retake photos
           </button>
@@ -561,7 +558,7 @@ export default function SelfieStep({
         {!isCapturePhase && (
           <button
             disabled
-            className="rounded-2xl bg-cyan-500/30 px-5 py-3 font-medium text-slate-400 cursor-not-allowed text-sm"
+            className="rounded-2xl bg-cyan-500/30 px-5 py-3 min-h-12 font-medium text-slate-400 cursor-not-allowed text-sm"
           >
             {livenessDone ? "Auto-capturing…" : "Complete liveness first"}
           </button>
@@ -570,7 +567,7 @@ export default function SelfieStep({
         {capturePhase === "side-ready" && (
           <button
             onClick={() => void captureFaceSidePhoto()}
-            className="rounded-2xl bg-emerald-500 px-5 py-3 font-medium text-slate-950 hover:bg-emerald-400 transition-colors"
+            className="rounded-2xl bg-emerald-500 px-5 py-3 min-h-12 font-medium text-slate-950 hover:bg-emerald-400 active:bg-emerald-300 transition-colors"
           >
             📸 Capture Side Photo
           </button>
@@ -579,7 +576,7 @@ export default function SelfieStep({
         {capturePhase === "side-guide" && (
           <button
             disabled
-            className="rounded-2xl bg-slate-700 px-5 py-3 font-medium text-slate-500 cursor-not-allowed text-sm"
+            className="rounded-2xl bg-slate-700 px-5 py-3 min-h-12 font-medium text-slate-500 cursor-not-allowed text-sm"
           >
             Turn your head to unlock →
           </button>

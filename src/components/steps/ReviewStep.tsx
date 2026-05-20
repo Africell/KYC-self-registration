@@ -1,14 +1,10 @@
 import { useState } from "react";
 import type { SubmissionPayload } from "../../types/kyc";
 import { truncateDeep } from "../../utils/image";
-import {
-  apiSubmitSIMRegistration,
-  type SIMRegistrationPayload,
-} from "../../lib/api/kyc.api";
+import { apiSubmitSIMRegistration, type SIMRegistrationPayload } from "../../lib/api/kyc.api";
 import axios from "axios";
 import { clearOTPTokenFromStorage, clearSession } from "../../lib/services/session.service";
 
-// AFTER — parse the stored object, extract just the token string
 const TOKEN_STORAGE_KEY = "kyc_otp_token";
 
 function loadToken(): string {
@@ -16,7 +12,7 @@ function loadToken(): string {
     const raw = localStorage.getItem(TOKEN_STORAGE_KEY);
     if (!raw) return "";
     const parsed = JSON.parse(raw) as { token: string; expiresAt: number };
-    if (Date.now() > parsed.expiresAt) return ""; // expired
+    if (Date.now() > parsed.expiresAt) return "";
     return parsed.token ?? "";
   } catch {
     return "";
@@ -37,31 +33,18 @@ type Props = {
   resetFlow: () => void;
 };
 
-export default function ReviewStep({
-  internalPayload,
-  backendPayload,
-  prevStep,
-  exportPayloadFile,
-  resetFlow,
-}: Props) {
-  const [submitState, setSubmitState] = useState<SubmitState>({
-    status: "idle",
-  });
+export default function ReviewStep({ internalPayload, backendPayload, prevStep, exportPayloadFile, resetFlow }: Props) {
+  const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle" });
+  const [showDebug, setShowDebug] = useState(false);
 
   const handleSubmit = async () => {
     try {
       setSubmitState({ status: "loading" });
-
       const token = loadToken();
       if (!token) {
-        setSubmitState({
-          status: "error",
-          message:
-            "Session expired. Please restart the flow and verify your number again.",
-        });
+        setSubmitState({ status: "error", message: "Session expired. Please restart the flow and verify your number again." });
         return;
       }
-
       const response = await apiSubmitSIMRegistration(backendPayload, token);
       clearSession();
       clearOTPTokenFromStorage();
@@ -69,107 +52,139 @@ export default function ReviewStep({
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const body = err.response?.data;
-        // Use ErrorDescription first, fall back to StatusDescription, then generic message
-        const message =
-          body?.ErrorDescription ||
-          body?.StatusDescription ||
-          err.message ||
-          "Unexpected error occurred.";
+        const message = body?.ErrorDescription || body?.StatusDescription || err.message || "Unexpected error occurred.";
         setSubmitState({ status: "error", message });
       } else {
-        setSubmitState({
-          status: "error",
-          message:
-            err instanceof Error ? err.message : "Unexpected error occurred.",
-        });
+        setSubmitState({ status: "error", message: err instanceof Error ? err.message : "Unexpected error occurred." });
       }
     }
   };
 
+  const isLoading = submitState.status === "loading";
+  const isSuccess = submitState.status === "success";
+
   return (
     <section className="space-y-5">
       <div>
-        <h2 className="text-2xl font-semibold">Payload review</h2>
-        <p className="mt-1 text-sm text-slate-300">
-          Internal payload (debug) + Backend payload (final API format)
+        <h2 className="text-xl font-semibold text-slate-100">Review & submit</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Confirm the data below before sending to the backend.
         </p>
       </div>
 
-      {submitState.status === "success" && (
-        <div className="rounded-2xl border border-emerald-700 bg-emerald-950/50 px-4 py-3 text-sm text-emerald-200">
-          <strong className="mr-2 uppercase tracking-wide">Success</strong>
-          Registration submitted successfully.
-          <pre className="mt-2 overflow-auto rounded-xl bg-emerald-950 p-3 text-xs text-emerald-100 whitespace-pre-wrap">
-            {JSON.stringify(submitState.data, null, 2)}
+      {/* Success banner */}
+      {isSuccess && (
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+          <div className="flex items-center gap-2 text-emerald-300 font-semibold text-sm mb-2">
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+            </svg>
+            Registration submitted successfully
+          </div>
+          <pre className="overflow-auto rounded-xl bg-emerald-950/60 p-3 text-xs text-emerald-200 whitespace-pre-wrap max-h-40">
+            {JSON.stringify((submitState as { status: "success"; data: unknown }).data, null, 2)}
           </pre>
         </div>
       )}
 
+      {/* Error banner */}
       {submitState.status === "error" && (
-        <div className="rounded-2xl border border-rose-700 bg-rose-950/50 px-4 py-3 text-sm text-rose-200">
-          <strong className="mr-2 uppercase tracking-wide">Error</strong>
+        <div className="flex items-start gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          <svg className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          </svg>
           {submitState.message}
         </div>
       )}
 
-      <div className="rounded-3xl border border-cyan-700 bg-slate-950 p-4">
-        <div className="mb-2 text-xs uppercase tracking-wide text-cyan-400">
-          Backend Payload (this will be sent)
+      {/* Backend payload */}
+      <div className="rounded-2xl border border-slate-700 bg-slate-900/60 overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-slate-700 px-4 py-2.5">
+          <span className="h-2 w-2 rounded-full bg-cyan-400" />
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Payload to be sent</p>
         </div>
-        <pre className="overflow-auto rounded-2xl bg-slate-900 p-4 text-xs text-slate-100 whitespace-pre-wrap">
+        <pre className="overflow-auto p-4 text-xs text-slate-200 whitespace-pre-wrap max-h-64">
           {JSON.stringify(truncateDeep(backendPayload), null, 2)}
         </pre>
       </div>
 
-      <div className="rounded-3xl border border-slate-800 bg-slate-950 p-4">
-        <div className="mb-2 text-xs uppercase tracking-wide text-slate-500">
-          Internal Payload (debug)
-        </div>
-        <pre className="overflow-auto rounded-2xl bg-slate-900 p-4 text-xs text-slate-100 whitespace-pre-wrap">
-          {JSON.stringify(truncateDeep(internalPayload), null, 2)}
-        </pre>
+      {/* Debug payload — collapsed by default */}
+      <div className="rounded-xl border border-slate-700/50">
+        <button
+          onClick={() => setShowDebug((v) => !v)}
+          className="flex w-full items-center justify-between px-4 py-3 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+        >
+          <span className="uppercase tracking-wide font-medium">Internal payload (debug)</span>
+          <svg className={`h-4 w-4 transition-transform ${showDebug ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+        {showDebug && (
+          <div className="border-t border-slate-700/50">
+            <pre className="overflow-auto p-4 text-xs text-slate-400 whitespace-pre-wrap max-h-48">
+              {JSON.stringify(truncateDeep(internalPayload), null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      {/* Actions */}
+      <div className="flex flex-wrap items-center gap-3 border-t border-slate-700/60 pt-4">
         <button
           onClick={prevStep}
-          disabled={submitState.status === "loading"}
-          className="rounded-2xl border border-slate-700 px-5 py-3 text-slate-200 hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={isLoading}
+          className="flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
         >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
           Back
         </button>
 
         <button
           onClick={exportPayloadFile}
-          disabled={submitState.status === "loading"}
-          className="rounded-2xl border border-slate-700 px-5 py-3 text-slate-200 hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={isLoading}
+          className="flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
         >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
           Download JSON
         </button>
 
         <button
           onClick={() => void handleSubmit()}
-          disabled={submitState.status === "loading"}
-          className="rounded-2xl bg-cyan-500 px-5 py-3 font-medium text-slate-950 hover:bg-cyan-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={isLoading}
+          className="flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {submitState.status === "loading" ? (
-            <span className="flex items-center gap-2">
-              <span className="inline-block w-4 h-4 rounded-full border-2 border-slate-950 border-t-transparent animate-spin" />
+          {isLoading ? (
+            <>
+              <span className="h-4 w-4 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" />
               Sending…
-            </span>
-          ) : submitState.status === "success" ? (
-            "✓ Sent — resend?"
+            </>
+          ) : isSuccess ? (
+            <>
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+              </svg>
+              Sent — resend?
+            </>
           ) : (
-            "Send to backend"
+            <>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+              </svg>
+              Submit registration
+            </>
           )}
         </button>
 
         <button
           onClick={resetFlow}
-          disabled={submitState.status === "loading"}
-          className="rounded-2xl border border-slate-700 px-5 py-3 text-slate-200 hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={isLoading}
+          className="rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Restart flow
+          Restart
         </button>
       </div>
     </section>

@@ -8,7 +8,7 @@ export const steps: Step[] = [
   { key: "selfie", label: "Selfie & Liveness" },
   { key: "document", label: "Document Capture" },
   { key: "ocr", label: "OCR & MRZ" },
-  { key: "signature", label: "signature" },
+  { key: "signature", label: "Signature" },
   { key: "match", label: "Face Match" },
   { key: "review", label: "Review Payload" },
 ];

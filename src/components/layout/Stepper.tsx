@@ -13,39 +13,83 @@ type Props = {
 };
 
 export default function Stepper({ steps, stepIndex, maxStepReached, onStepClick }: Props) {
-  return (
-    <div className="mb-8 grid gap-3 md:grid-cols-6">
-      {steps.map((step, index) => {
-        const active = index === stepIndex;
-        // A step is "visited" if the user has been there — can navigate to it freely.
-        const visited = index <= maxStepReached && !active;
-        const clickable = visited && !!onStepClick;
+  const progressPct = steps.length > 1 ? (stepIndex / (steps.length - 1)) * 100 : 0;
 
-        return (
+  return (
+    <div className=" w-full">
+      {/* Progress bar */}
+      <div className="relative mb-14">
+        <div className="mx-auto h-1.5 w-full rounded-full bg-slate-800">
           <div
-            key={step.key}
-            onClick={() => clickable && onStepClick(index)}
-            title={clickable ? `Go to ${step.label}` : undefined}
-            className={cx(
-              "rounded-2xl border px-4 py-3 text-sm shadow-lg transition select-none",
-              active && "border-cyan-400 bg-cyan-500/10 text-cyan-100",
-              visited && "border-emerald-500/50 bg-emerald-500/10 text-emerald-100",
-              visited && clickable && "cursor-pointer hover:bg-emerald-500/20 hover:border-emerald-400",
-              !active && !visited && "border-slate-800 bg-slate-900 text-slate-400",
-            )}
-          >
-            <div className="mb-1 flex items-center justify-between text-xs uppercase tracking-wide opacity-70">
-              <span>Step {index + 1}</span>
-              {visited && (
-                <svg className="h-3.5 w-3.5 text-emerald-400 opacity-100" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-4.121-4.121a1 1 0 011.414-1.414L8.414 12.172l7.879-7.879a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              )}
-            </div>
-            <div className="font-medium">{step.label}</div>
-          </div>
-        );
-      })}
+            className="h-full rounded-full bg-linear-to-r from-cyan-500 to-emerald-400 transition-all duration-500 ease-in-out"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+
+          {/* Step circles + labels — each circle and its label are stacked together */}
+        <div className="absolute  inset-x-0 top-5 flex w-full -translate-y-1/2  justify-between">
+          {steps.map((step, index) => {
+            const active      = index === stepIndex;
+            const completed   = !active && index < stepIndex;
+            const revisitable = !active && index > stepIndex && index <= maxStepReached;
+            const clickable   = (completed || revisitable) && !!onStepClick;
+
+            return (
+              <div key={step.key} className="flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!clickable}
+                  onClick={() => clickable && onStepClick(index)}
+                  title={clickable ? `Go to ${step.label}` : step.label}
+                  className={cx(
+                    "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300 focus:outline-none",
+                    active      && "scale-110 border-cyan-400 bg-cyan-500 text-white shadow-lg shadow-cyan-500/40",
+                    completed   && "border-emerald-400 bg-emerald-500 text-white",
+                    completed   && clickable && "cursor-pointer hover:scale-110 hover:shadow-md hover:shadow-emerald-500/30",
+                    revisitable && "border-amber-400 bg-slate-900 text-amber-300",
+                    revisitable && clickable && "cursor-pointer hover:bg-amber-400/10 hover:scale-105",
+                    !active && !completed && !revisitable && "border-slate-700 bg-slate-900 text-slate-500 cursor-default",
+                  )}
+                >
+                  {completed ? (
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-4.121-4.121a1 1 0 011.414-1.414L8.414 12.172l7.879-7.879a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  ) : active ? (
+                    <span className="relative flex h-3 w-3">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300 opacity-60" />
+                      <span className="relative inline-flex h-3 w-3 rounded-full bg-white" />
+                    </span>
+                  ) : (
+                    index + 1
+                  )}
+                </button>
+
+                {/* Label — hidden on mobile except active */}
+                <span className={cx(
+                  "hidden sm:block text-xs font-medium text-center leading-tight transition-colors duration-300 w-16",
+                  active      && "text-cyan-300",
+                  completed   && "text-emerald-400",
+                  revisitable && "text-amber-400",
+                  !active && !completed && !revisitable && "text-slate-500",
+                )}>
+                  {step.label}
+                </span>
+                {active && (
+                  <span className="block sm:hidden text-xs font-semibold text-cyan-300 text-center w-16">
+                    {step.label}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mobile: step counter */}
+      <p className="mt-10 text-center text-xs text-slate-400 sm:hidden">
+        Step {stepIndex + 1} of {steps.length}
+      </p>
     </div>
   );
 }

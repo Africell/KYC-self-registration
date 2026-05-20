@@ -28,18 +28,20 @@ interface UseDocumentProps {
 }
 
 interface UseDocumentReturn {
-  documentImage:           string;
-  documentQuality:         DocumentQuality | null;
-  documentBackImage:       string;
-  documentBackQuality:     DocumentQuality | null;
-  documentPreviewMode:     "camera" | "upload";
-  setDocumentPreviewMode:  (mode: "camera" | "upload") => void;
-  captureDocument:         () => Promise<void>;
-  captureDocumentBack:     () => Promise<void>;
-  handleDocumentUpload:    (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
-  handleDocumentBackUpload:(e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
-  saveDocumentBlobLocally: () => Promise<void>;
-  saveDocumentBackBlobLocally: () => Promise<void>;
+  documentImage:                   string;
+  documentQuality:                 DocumentQuality | null;
+  documentBackImage:               string;
+  documentBackQuality:             DocumentQuality | null;
+  documentPreviewMode:             "camera" | "upload";
+  setDocumentPreviewMode:          (mode: "camera" | "upload") => void;
+  captureDocument:                 () => Promise<void>;
+  captureDocumentBack:             () => Promise<void>;
+  handleDocumentUpload:            (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleDocumentBackUpload:        (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  setDocumentImageFromDataUrl:     (dataUrl: string) => Promise<void>;
+  setDocumentBackImageFromDataUrl: (dataUrl: string) => Promise<void>;
+  saveDocumentBlobLocally:         () => Promise<void>;
+  saveDocumentBackBlobLocally:     () => Promise<void>;
   rehydrateDocument: (
     s: Pick<KYCSession, "documentImage" | "documentBackImage" | "documentQuality" | "documentBackQuality">
   ) => void;
@@ -138,6 +140,29 @@ export function useDocument({
     [clearError, pushError, setImage, setQuality],
   );
 
+  // ── Shared: analyze data URL and store ───────────────────────────────────
+  const analyzeAndSet = useCallback(
+    async (side: DocumentSide, dataUrl: string): Promise<void> => {
+      const errorScope   = side === "front" ? "document"         : "document-back";
+      const qualityScope = side === "front" ? "document-quality" : "document-back-quality";
+      try {
+        clearError();
+        const quality = await analyzeDocumentQuality(dataUrl);
+        setImage(side, dataUrl);
+        setQuality(side, quality);
+        if (!quality.looksUsefulForOCR) {
+          pushError(qualityScope, quality.reasons[0] ?? "Image quality may affect OCR accuracy.");
+        }
+      } catch (err) {
+        pushError(errorScope, err instanceof Error ? err.message : `Could not process ${side} document image.`);
+      }
+    },
+    [clearError, pushError, setImage, setQuality],
+  );
+
+  const setDocumentImageFromDataUrl     = useCallback((dataUrl: string) => analyzeAndSet("front", dataUrl), [analyzeAndSet]);
+  const setDocumentBackImageFromDataUrl = useCallback((dataUrl: string) => analyzeAndSet("back",  dataUrl), [analyzeAndSet]);
+
   // ── Shared: save locally ──────────────────────────────────────────────────
   const saveLocally = useCallback(
     async (dataUrl: string, filename: string): Promise<void> => {
@@ -217,6 +242,8 @@ export function useDocument({
     captureDocumentBack,
     handleDocumentUpload,
     handleDocumentBackUpload,
+    setDocumentImageFromDataUrl,
+    setDocumentBackImageFromDataUrl,
     saveDocumentBlobLocally,
     saveDocumentBackBlobLocally,
     rehydrateDocument,

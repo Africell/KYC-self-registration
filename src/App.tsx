@@ -37,11 +37,13 @@ import { LanguageSwitcher } from "./components/layout/LanguageSwitcher";
 
 import { apiSubmitSIMRegistration } from "./lib/api/kyc.api";
 import { getStoredToken } from "./lib/services/msisdn.service";
-import { transformToBackendPayload } from "./utils/image";
+import { transformToBackendPayload, fileToDataUrl } from "./utils/image";
 import type { SessionPatch } from "./lib/services/session.service";
 import DocumentStep from "./components/steps/document/DocumentStep";
 import SignatureStep from "./components/steps/Signaturestep";
 import bgOkapi from "./assets/bg-okapi.jpg";
+import Demo from "./components/steps/Demo";
+import UploadExample from "./components/steps/Demo";
 
 // ── Auto-save helper ──────────────────────────────────────────────────────────
 // Consolidates the rehydration guard so it isn't copy-pasted across 10 effects.
@@ -162,11 +164,47 @@ export default function App(): JSX.Element {
     captureDocumentBack,
     handleDocumentUpload,
     handleDocumentBackUpload,
+    setDocumentImageFromDataUrl,
+    setDocumentBackImageFromDataUrl,
     saveDocumentBlobLocally,
     saveDocumentBackBlobLocally,
     rehydrateDocument,
     resetDocument,
   } = useDocument({ docWebcamRef, pushError, clearError });
+
+  // ── Document crop editor ──────────────────────────────────────────────────
+  const [cropState, setCropState] = useState<{
+    src: string;
+    side: "front" | "back";
+  } | null>(null);
+
+  const handleDocumentFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const src = await fileToDataUrl(file);
+    setCropState({ src, side: "front" });
+  };
+
+  const handleDocumentBackFileSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const src = await fileToDataUrl(file);
+    setCropState({ src, side: "back" });
+  };
+
+  const handleCropConfirm = async (croppedDataUrl: string) => {
+    if (!cropState) return;
+    if (cropState.side === "front") {
+      await setDocumentImageFromDataUrl(croppedDataUrl);
+    } else {
+      await setDocumentBackImageFromDataUrl(croppedDataUrl);
+    }
+    setCropState(null);
+  };
 
   // ── OCR & MRZ ─────────────────────────────────────────────────────────────
   const {
@@ -336,149 +374,150 @@ export default function App(): JSX.Element {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="relative flex justify-center items-center min-h-screen text-slate-100">
-      {/* Fixed background — always viewport-sized, never zooms with content */}
-      <div
-        className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${bgOkapi})` }}
-      />
-      <div className="w-full flex flex-col gap-5 max-w-3xl mx-auto px-4 py-6">
-        {/* ── Top bar ───────────────────────────────────────────────────────── */}
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <Header modelsLoaded={modelsLoaded} activeStepLabel={activeStep.label} />
-          {/* <LanguageSwitcher timers={timers} /> */}
-           <LanguageSwitcher />
-        </div>
+    // <div className="relative flex justify-center items-center min-h-screen text-slate-100">
+    //   {/* Fixed background — always viewport-sized, never zooms with content */}
+    //   <div
+    //     className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+    //     style={{ backgroundImage: `url(${bgOkapi})` }}
+    //   />
+    //   <div className="w-full flex flex-col gap-5 max-w-3xl mx-auto px-4 py-6">
+    //     {/* ── Top bar ───────────────────────────────────────────────────────── */}
+    //     <div className="mb-6 flex items-center justify-between gap-4">
+    //       <Header modelsLoaded={modelsLoaded} activeStepLabel={activeStep.label} />
+    //       {/* <LanguageSwitcher timers={timers} /> */}
+    //        <LanguageSwitcher />
+    //     </div>
 
-        <Stepper
-          steps={steps}
-          stepIndex={stepIndex}
-          maxStepReached={maxStepReached}
-          onStepClick={goToStep}
-        />
+    //     <Stepper
+    //       steps={steps}
+    //       stepIndex={stepIndex}
+    //       maxStepReached={maxStepReached}
+    //       onStepClick={goToStep}
+    //     />
 
-        {error && (
-          <div className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            <strong className="mr-2 uppercase tracking-wide text-amber-300">
-              {error.scope}
-            </strong>
-            {error.message}
-          </div>
-        )}
+    //     {error && (
+    //       <div className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+    //         <strong className="mr-2 uppercase tracking-wide text-amber-300">
+    //           {error.scope}
+    //         </strong>
+    //         {error.message}
+    //       </div>
+    //     )}
 
-        <div className="rounded-3xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-sm p-6 shadow-2xl shadow-black/40">
-            {activeStep.key === "msisdn" && (
-              <MSISDNStep
-                msisdn={msisdn}
-                setMsisdn={setMsisdn}
-                nextStep={nextStep}
-              />
-            )}
+    //     <div className="rounded-3xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-sm p-6 shadow-2xl shadow-black/40">
+    //         {activeStep.key === "msisdn" && (
+    //           <MSISDNStep
+    //             msisdn={msisdn}
+    //             setMsisdn={setMsisdn}
+    //             nextStep={nextStep}
+    //           />
+    //         )}
 
-            {activeStep.key === "consent" && (
-              <ConsentStep
-                agreed={agreed}
-                setAgreed={setAgreed}
-                nextStep={nextStep}
-                modelsLoaded={modelsLoaded}
-              />
-            )}
+    //         {activeStep.key === "consent" && (
+    //           <ConsentStep
+    //             agreed={agreed}
+    //             setAgreed={setAgreed}
+    //             nextStep={nextStep}
+    //             modelsLoaded={modelsLoaded}
+    //           />
+    //         )}
 
-            {activeStep.key === "selfie" && (
-              <SelfieStep
-                selfieWebcamRef={selfieWebcamRef}
-                videoConstraints={videoConstraints}
-                landmarkStatus={landmarkStatus}
-                livenessCompleted={livenessCompleted}
-                livenessDone={livenessDone}
-                captureSelfie={captureSelfie}
-                prevStep={prevStep}
-                selfieImage={selfieImage}
-                faceSidePhoto={faceSidePhoto}
-                captureFaceSidePhoto={captureFaceSidePhoto}
-                livenessChallenge={livenessChallenge}
-                challengeSequence={challengeSequence}
-                challengeIndex={challengeIndex}
-                challengeTimeLeft={challengeTimeLeft}
-                phase={phase}
-                startChallenges={startChallenges}
-                retryChallenge={retryChallenge}
-                retakeSelfie={() => {
-                  resetSelfie();
-                  resetLiveness();
-                }}
-                captureStatus={captureStatus}
-              />
-            )}
+    //         {activeStep.key === "selfie" && (
+    //           <SelfieStep
+    //             selfieWebcamRef={selfieWebcamRef}
+    //             videoConstraints={videoConstraints}
+    //             landmarkStatus={landmarkStatus}
+    //             livenessCompleted={livenessCompleted}
+    //             livenessDone={livenessDone}
+    //             captureSelfie={captureSelfie}
+    //             prevStep={prevStep}
+    //             selfieImage={selfieImage}
+    //             faceSidePhoto={faceSidePhoto}
+    //             captureFaceSidePhoto={captureFaceSidePhoto}
+    //             livenessChallenge={livenessChallenge}
+    //             challengeSequence={challengeSequence}
+    //             challengeIndex={challengeIndex}
+    //             challengeTimeLeft={challengeTimeLeft}
+    //             phase={phase}
+    //             startChallenges={startChallenges}
+    //             retryChallenge={retryChallenge}
+    //             retakeSelfie={() => {
+    //               resetSelfie();
+    //               resetLiveness();
+    //             }}
+    //             captureStatus={captureStatus}
+    //           />
+    //         )}
 
-            {activeStep.key === "signature" && (
-              <SignatureStep
-                signatureImage={signatureImage}
-                setSignatureImage={setSignatureImage}
-                nextStep={nextStep}
-                prevStep={prevStep}
-              />
-            )}
+    //         {activeStep.key === "signature" && (
+    //           <SignatureStep
+    //             signatureImage={signatureImage}
+    //             setSignatureImage={setSignatureImage}
+    //             nextStep={nextStep}
+    //             prevStep={prevStep}
+    //           />
+    //         )}
 
-            {activeStep.key === "document" && (
-              <DocumentStep
-                docType={docType}
-                setDocType={setDocType}
-                documentPreviewMode={documentPreviewMode}
-                setDocumentPreviewMode={setDocumentPreviewMode}
-                docWebcamRef={docWebcamRef}
-                captureDocument={captureDocument}
-                captureDocumentBack={captureDocumentBack}
-                handleDocumentUpload={handleDocumentUpload}
-                handleDocumentBackUpload={handleDocumentBackUpload}
-                documentImage={documentImage}
-                documentBackImage={documentBackImage}
-                runOCRAndMRZ={runOCRAndMRZ}
-                prevStep={prevStep}
-                docVideoConstraints={docVideoConstraints}
-                documentQuality={documentQuality}
-                documentBackQuality={documentBackQuality}
-                saveDocumentBlobLocally={saveDocumentBlobLocally}
-                saveDocumentBackBlobLocally={saveDocumentBackBlobLocally}
-                busy={ocrBusy}
-              />
-            )}
+    //         {activeStep.key === "document" && (
+    //           <DocumentStep
+    //             docType={docType}
+    //             setDocType={setDocType}
+    //             documentPreviewMode={documentPreviewMode}
+    //             setDocumentPreviewMode={setDocumentPreviewMode}
+    //             docWebcamRef={docWebcamRef}
+    //             captureDocument={captureDocument}
+    //             captureDocumentBack={captureDocumentBack}
+    //             handleDocumentUpload={handleDocumentFileSelect}
+    //             handleDocumentBackUpload={handleDocumentBackFileSelect}
+    //             documentImage={documentImage}
+    //             documentBackImage={documentBackImage}
+    //             runOCRAndMRZ={runOCRAndMRZ}
+    //             prevStep={prevStep}
+    //             docVideoConstraints={docVideoConstraints}
+    //             documentQuality={documentQuality}
+    //             documentBackQuality={documentBackQuality}
+    //             saveDocumentBlobLocally={saveDocumentBlobLocally}
+    //             saveDocumentBackBlobLocally={saveDocumentBackBlobLocally}
+    //             busy={ocrBusy}
+    //           />
+    //         )}
 
-            {activeStep.key === "ocr" && (
-              <OCRStep
-                fields={fields}
-                setFields={setFields}
-                runFaceMatch={runFaceMatch}
-                prevStep={prevStep}
-                mrzValid={mrzValid}
-                mrzMessage={mrzMessage}
-                busy={matchBusy}
-                docType={docType}
-              />
-            )}
+    //         {activeStep.key === "ocr" && (
+    //           <OCRStep
+    //             fields={fields}
+    //             setFields={setFields}
+    //             runFaceMatch={runFaceMatch}
+    //             prevStep={prevStep}
+    //             mrzValid={mrzValid}
+    //             mrzMessage={mrzMessage}
+    //             busy={matchBusy}
+    //             docType={docType}
+    //           />
+    //         )}
 
-            {activeStep.key === "match" && (
-              <FaceMatchStep
-                selfieImage={selfieImage}
-                documentImage={documentImage}
-                faceMatch={faceMatch}
-                prevStep={prevStep}
-                onSubmit={handleSubmit}
-                onReset={handleReset}
-              />
-            )}
+    //         {activeStep.key === "match" && (
+    //           <FaceMatchStep
+    //             selfieImage={selfieImage}
+    //             documentImage={documentImage}
+    //             faceMatch={faceMatch}
+    //             prevStep={prevStep}
+    //             onSubmit={handleSubmit}
+    //             onReset={handleReset}
+    //           />
+    //         )}
 
-            {activeStep.key === "review" && (
-              <ReviewStep
-                internalPayload={internalPayload}
-                backendPayload={backendPayload}
-                prevStep={prevStep}
-                exportPayloadFile={exportPayloadFile}
-                resetFlow={handleReset}
-              />
-            )}
-          </div>
-      </div>
-    </div>
+    //         {activeStep.key === "review" && (
+    //           <ReviewStep
+    //             internalPayload={internalPayload}
+    //             backendPayload={backendPayload}
+    //             prevStep={prevStep}
+    //             exportPayloadFile={exportPayloadFile}
+    //             resetFlow={handleReset}
+    //           />
+    //         )}
+    //       </div>
+    //   </div>
+    // </div>
+    <UploadExample/>
   );
 }

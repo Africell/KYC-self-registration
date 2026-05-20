@@ -6,7 +6,7 @@ import Webcam from "react-webcam";
 
 import { useKYCFlow } from "./hooks/useKYCFlow";
 import { useModels } from "./hooks/useModels";
-import { useSessionTimers } from "./hooks/useSessionTimers";
+// import { useSessionTimers } from "./hooks/useSessionTimers";
 import { useSelfie } from "./hooks/useSelfie";
 import { useDocument } from "./hooks/useDocument";
 import { useOCR } from "./hooks/useOCR";
@@ -92,7 +92,7 @@ export default function App(): JSX.Element {
 
   // ── Session timers ────────────────────────────────────────────────────────
   // Reads only from localStorage — no dependency on any React state.
-  const timers = useSessionTimers();
+  // const timers = useSessionTimers();
 
   // ── MSISDN ────────────────────────────────────────────────────────────────
   // Declared before the rehydration effect so setMsisdn is available when it runs.
@@ -346,7 +346,8 @@ export default function App(): JSX.Element {
         {/* ── Top bar ───────────────────────────────────────────────────────── */}
         <div className="mb-6 flex items-center justify-between gap-4">
           <Header modelsLoaded={modelsLoaded} activeStepLabel={activeStep.label} />
-          <LanguageSwitcher timers={timers} />
+          {/* <LanguageSwitcher timers={timers} /> */}
+           <LanguageSwitcher />
         </div>
 
         <Stepper

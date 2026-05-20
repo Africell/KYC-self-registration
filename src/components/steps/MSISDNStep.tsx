@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
+import { useTranslation } from "react-i18next";
 import {
   checkMSISDN,
   generateOTP,
@@ -28,17 +29,19 @@ interface ErrorState {
 }
 
 const EMPTY_ERRORS: ErrorState = { input: "", otp: "", captcha: "" };
+
 function RecaptchaDisclaimer() {
+  const { t } = useTranslation();
   return (
     <p className="text-center text-xs text-slate-600">
-      Protected by reCAPTCHA —{" "}
+      {t("msisdn_recaptcha")}{" "}
       <a
         href="https://policies.google.com/privacy"
         target="_blank"
         rel="noreferrer"
         className="underline hover:text-slate-400 transition-colors"
       >
-        Privacy
+        {t("msisdn_privacy")}
       </a>{" "}
       &amp;{" "}
       <a
@@ -47,7 +50,7 @@ function RecaptchaDisclaimer() {
         rel="noreferrer"
         className="underline hover:text-slate-400 transition-colors"
       >
-        Terms
+        {t("msisdn_terms")}
       </a>
     </p>
   );
@@ -60,17 +63,14 @@ export default function MSISDNStep({
   setMsisdn,
   nextStep,
 }: MSISDNStepProps) {
+  const { t } = useTranslation();
   const { executeRecaptcha } = useGoogleReCaptcha();
 
   const [phase, setPhase] = useState<Phase>("IDLE");
   const [errors, setErrors] = useState<ErrorState>(EMPTY_ERRORS);
   const [loading, setLoading] = useState(false);
-  // Server-provided OTP TTL in seconds — drives the OTPSection countdown timer
   const [otpTotalSeconds, setOtpTotalSeconds] = useState(0);
-  // Server-authoritative remaining attempts — received in verifyOTP response
-  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(
-    undefined,
-  );
+  const [attemptsLeft, setAttemptsLeft] = useState<number | undefined>(undefined);
 
   const setError = useCallback(
     (field: keyof ErrorState, message: string) =>
@@ -88,15 +88,12 @@ export default function MSISDNStep({
   const executeCaptcha = useCallback(
     async (action: string): Promise<string | null> => {
       if (!executeRecaptcha) {
-        setError(
-          "captcha",
-          "Security check not ready yet. Please wait a moment.",
-        );
+        setError("captcha", t("msisdn_error_captcha"));
         return null;
       }
       return executeRecaptcha(action);
     },
-    [executeRecaptcha, setError],
+    [executeRecaptcha, setError, t],
   );
 
   // ── Phone input ───────────────────────────────────────────────────────────
@@ -118,10 +115,7 @@ export default function MSISDNStep({
     clearErrors();
 
     if (!isValidE164(msisdn)) {
-      setError(
-        "input",
-        "Enter a valid international number (e.g. +243970000001)",
-      );
+      setError("input", t("msisdn_error_invalid"));
       return;
     }
 
@@ -133,7 +127,7 @@ export default function MSISDNStep({
       const result = checkMSISDN(msisdn);
       if (result === "REGISTERED") {
         setPhase("REGISTERED");
-        setError("input", "This number is already registered.");
+        setError("input", t("msisdn_error_registered"));
         return;
       }
 
@@ -145,14 +139,12 @@ export default function MSISDNStep({
       console.error("[MSISDNStep] OTP generation error:", err);
       setError(
         "captcha",
-        err instanceof Error
-          ? err.message
-          : "Failed to send verification code. Please try again.",
+        err instanceof Error ? err.message : t("msisdn_error_send"),
       );
     } finally {
       setLoading(false);
     }
-  }, [msisdn, executeCaptcha, clearErrors, setError]);
+  }, [msisdn, executeCaptcha, clearErrors, setError, t]);
 
   // ── Verify OTP ────────────────────────────────────────────────────────────
 
@@ -178,18 +170,17 @@ export default function MSISDNStep({
         if (result.reason === "WRONG_CODE") {
           setAttemptsLeft(result.attemptsRemaining);
         } else {
-          // EXPIRED or MAX_ATTEMPTS — no more attempts are relevant
           setAttemptsLeft(undefined);
           setPhase("IDLE");
         }
       } catch (err) {
         console.error("[MSISDNStep] OTP verification error:", err);
-        setError("otp", "Verification failed. Please try again.");
+        setError("otp", t("msisdn_error_send"));
       } finally {
         setLoading(false);
       }
     },
-    [msisdn, executeCaptcha, nextStep, clearErrors, setError],
+    [msisdn, executeCaptcha, nextStep, clearErrors, setError, t],
   );
 
   // ── Resend OTP ────────────────────────────────────────────────────────────
@@ -210,15 +201,13 @@ export default function MSISDNStep({
       console.error("[MSISDNStep] OTP resend error:", err);
       setError(
         "otp",
-        err instanceof Error
-          ? err.message
-          : "Failed to resend code. Please try again.",
+        err instanceof Error ? err.message : t("msisdn_error_resend"),
       );
       return otpTotalSeconds;
     } finally {
       setLoading(false);
     }
-  }, [msisdn, otpTotalSeconds, executeCaptcha, clearErrors, setError]);
+  }, [msisdn, otpTotalSeconds, executeCaptcha, clearErrors, setError, t]);
 
   // ── Go back to phone input ────────────────────────────────────────────────
 
@@ -236,11 +225,9 @@ export default function MSISDNStep({
   return (
     <section className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold">Verify your number</h2>
+        <h2 className="text-2xl font-semibold">{t("msisdn_title")}</h2>
         <p className="mt-1 text-sm text-slate-400">
-          {showOTPInput
-            ? "We sent a code to your number."
-            : "Enter your mobile number to get started."}
+          {showOTPInput ? t("msisdn_subtitle_otp") : t("msisdn_subtitle_idle")}
         </p>
       </div>
 
@@ -248,7 +235,7 @@ export default function MSISDNStep({
       {showPhoneInput && (
         <div className="space-y-3">
           <label className="block text-xs uppercase tracking-widest text-slate-500">
-            Mobile number
+            {t("msisdn_label")}
           </label>
 
           <input
@@ -290,10 +277,10 @@ export default function MSISDNStep({
             {loading ? (
               <>
                 <span className="w-4 h-4 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" />
-                Sending code…
+                {t("msisdn_sending")}
               </>
             ) : (
-              "Send verification code →"
+              t("msisdn_send")
             )}
           </button>
 
@@ -306,14 +293,13 @@ export default function MSISDNStep({
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-400">
-              Code sent to{" "}
-              <span className="text-slate-200 font-medium">{maskedPhone}</span>
+              {t("msisdn_code_sent", { phone: maskedPhone })}
             </span>
             <button
               onClick={handleBack}
               className="text-cyan-400 hover:text-cyan-300 hover:underline text-xs transition-colors"
             >
-              Change number
+              {t("msisdn_change")}
             </button>
           </div>
 

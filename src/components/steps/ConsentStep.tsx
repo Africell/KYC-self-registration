@@ -43,7 +43,7 @@ export default function ConsentStep({ agreed, setAgreed, nextStep, modelsLoaded 
       {!modelsLoaded && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2.5 text-xs text-amber-300">
           <span className="h-3.5 w-3.5 rounded-full border-2 border-amber-400/40 border-t-amber-400 animate-spin shrink-0" />
-          Loading face recognition models, please wait…
+          {t("consent_models_loading")}
         </div>
       )}
 

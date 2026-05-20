@@ -1,14 +1,14 @@
 // src/components/steps/OTPSection.tsx
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface OTPSectionProps {
   onVerify:       (code: string) => void;
-  onResend:       () => Promise<number>; // returns fresh TTL seconds from server
+  onResend:       () => Promise<number>;
   error:          string;
   loading?:       boolean;
-  initialSeconds: number;  // server-provided TTL on first render
-  // Server-provided remaining attempts — undefined until first wrong attempt
+  initialSeconds: number;
   attemptsLeft:   number | undefined;
 }
 
@@ -22,9 +22,10 @@ export default function OTPSection({
   initialSeconds,
   attemptsLeft,
 }: OTPSectionProps) {
-  const [digits,     setDigits]    = useState<string[]>(Array(OTP_LENGTH).fill(""));
-  const [secondsLeft, setSeconds]  = useState(initialSeconds);
-  const [canResend,  setCanResend] = useState(false);
+  const { t } = useTranslation();
+  const [digits,      setDigits]    = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [secondsLeft, setSeconds]   = useState(initialSeconds);
+  const [canResend,   setCanResend] = useState(false);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const tickRef   = useRef<number | null>(null);
@@ -49,8 +50,6 @@ export default function OTPSection({
     }, 1000);
   };
 
-  // Start countdown when the server-provided TTL arrives.
-  // Re-syncs if initialSeconds changes (shouldn't happen but safe).
   useEffect(() => {
     if (initialSeconds <= 0) return;
     startTick(initialSeconds);
@@ -115,15 +114,13 @@ export default function OTPSection({
   const isUrgent  = totalSecs > 0 && totalSecs < 30;
   const filled    = digits.every(Boolean);
 
-  // Show attempts badge only when the server has told us how many remain
-  // and there are still attempts left (MAX_ATTEMPTS message covers the 0 case)
   const showAttempts = error && attemptsLeft !== undefined && attemptsLeft > 0;
 
   return (
     <div className="space-y-5">
       {/* ── Timer + label ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-between text-sm">
-        <p className="text-slate-400">Enter the {OTP_LENGTH}-digit code.</p>
+        <p className="text-slate-400">{t("otp_label", { count: OTP_LENGTH })}</p>
         {!canResend && (
           <span className={`tabular-nums font-medium transition-colors ${
             isUrgent ? "text-rose-400" : "text-slate-400"
@@ -169,7 +166,7 @@ export default function OTPSection({
           </p>
           {showAttempts && (
             <p className="text-xs text-slate-500">
-              {attemptsLeft} attempt{attemptsLeft !== 1 ? "s" : ""} remaining
+              {t("otp_attempts_remaining", { count: attemptsLeft })}
             </p>
           )}
         </div>
@@ -186,10 +183,10 @@ export default function OTPSection({
         {loading ? (
           <>
             <span className="w-4 h-4 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" />
-            Verifying…
+            {t("otp_verifying")}
           </>
         ) : (
-          "Verify Code"
+          t("otp_verify")
         )}
       </button>
 
@@ -197,18 +194,18 @@ export default function OTPSection({
       <p className="text-center text-sm text-slate-500">
         {canResend ? (
           <>
-            Didn't receive it?{" "}
+            {t("otp_no_receive")}{" "}
             <button
               onClick={() => void handleResend()}
               disabled={loading}
               className="text-cyan-400 hover:text-cyan-300 hover:underline
                 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Resend code
+              {t("otp_resend")}
             </button>
           </>
         ) : (
-          "Didn't receive it? Wait for the timer to resend."
+          t("otp_wait")
         )}
       </p>
     </div>

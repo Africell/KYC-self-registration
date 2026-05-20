@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { cx } from "../../lib/utils";
 
 type Step = {
@@ -13,10 +14,11 @@ type Props = {
 };
 
 export default function Stepper({ steps, stepIndex, maxStepReached, onStepClick }: Props) {
+  const { t } = useTranslation();
   const progressPct = steps.length > 1 ? (stepIndex / (steps.length - 1)) * 100 : 0;
 
   return (
-    <div className=" w-full">
+    <div className="w-full">
       {/* Progress bar */}
       <div className="relative mb-14">
         <div className="mx-auto h-1.5 w-full rounded-full bg-slate-800">
@@ -26,13 +28,13 @@ export default function Stepper({ steps, stepIndex, maxStepReached, onStepClick 
           />
         </div>
 
-          {/* Step circles + labels — each circle and its label are stacked together */}
-        <div className="absolute  inset-x-0 top-5 flex w-full -translate-y-1/2  justify-between">
+        <div className="absolute inset-x-0 top-5 flex w-full -translate-y-1/2 justify-between">
           {steps.map((step, index) => {
             const active      = index === stepIndex;
             const completed   = !active && index < stepIndex;
             const revisitable = !active && index > stepIndex && index <= maxStepReached;
             const clickable   = (completed || revisitable) && !!onStepClick;
+            const label       = t(step.label);
 
             return (
               <div key={step.key} className="flex flex-col items-center gap-2">
@@ -40,7 +42,7 @@ export default function Stepper({ steps, stepIndex, maxStepReached, onStepClick 
                   type="button"
                   disabled={!clickable}
                   onClick={() => clickable && onStepClick(index)}
-                  title={clickable ? `Go to ${step.label}` : step.label}
+                  title={clickable ? t("stepper_goto", { label }) : label}
                   className={cx(
                     "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300 focus:outline-none",
                     active      && "scale-110 border-cyan-400 bg-cyan-500 text-white shadow-lg shadow-cyan-500/40",
@@ -65,7 +67,6 @@ export default function Stepper({ steps, stepIndex, maxStepReached, onStepClick 
                   )}
                 </button>
 
-                {/* Label — hidden on mobile except active */}
                 <span className={cx(
                   "hidden sm:block text-xs font-medium text-center leading-tight transition-colors duration-300 w-16",
                   active      && "text-cyan-300",
@@ -73,11 +74,11 @@ export default function Stepper({ steps, stepIndex, maxStepReached, onStepClick 
                   revisitable && "text-amber-400",
                   !active && !completed && !revisitable && "text-slate-500",
                 )}>
-                  {step.label}
+                  {label}
                 </span>
                 {active && (
                   <span className="block sm:hidden text-xs font-semibold text-cyan-300 text-center w-16">
-                    {step.label}
+                    {label}
                   </span>
                 )}
               </div>
@@ -86,9 +87,8 @@ export default function Stepper({ steps, stepIndex, maxStepReached, onStepClick 
         </div>
       </div>
 
-      {/* Mobile: step counter */}
       <p className="mt-10 text-center text-xs text-slate-400 sm:hidden">
-        Step {stepIndex + 1} of {steps.length}
+        {t("stepper_counter", { current: stepIndex + 1, total: steps.length })}
       </p>
     </div>
   );

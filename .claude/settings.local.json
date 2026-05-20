@@ -9,7 +9,8 @@
       "PowerShell(cd \"c:\\\\Users\\\\layla.abosaad\\\\OneDrive - Africell\\\\Desktop\\\\proj\\\\proj\"; $env:VITE_UI_BASE_URL=\"https://okapihruat.africell.cd/KYC_WEB/\"; npm run build 2>&1 | Select-Object -Last 20)",
       "Bash(npm install *)",
       "Bash(node -e ' *)",
-      "Bash(findstr /S \"national_id\\\\|IdDocType\\\\|document.type\\\\|docType\" *.tsx *.ts)"
+      "Bash(findstr /S \"national_id\\\\|IdDocType\\\\|document.type\\\\|docType\" *.tsx *.ts)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\layla.abosaad\\\\OneDrive - Africell\\\\Desktop\\\\proj\\\\proj\\\\src\" -Filter \"*.json\" -Recurse)"
     ]
   }
 }

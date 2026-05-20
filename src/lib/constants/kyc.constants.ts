@@ -3,14 +3,14 @@ import type { Step, ExtractedFields, KYCSession } from "../../types/kyc";
 // ── Flow steps ────────────────────────────────────────────────────────────────
 
 export const steps: Step[] = [
-  { key: "msisdn", label: "Mobile Number" },
-  { key: "consent", label: "Consent" },
-  { key: "selfie", label: "Selfie & Liveness" },
-  { key: "document", label: "Document Capture" },
-  { key: "ocr", label: "OCR & MRZ" },
-  { key: "signature", label: "Signature" },
-  { key: "match", label: "Face Match" },
-  // { key: "review", label: "Review Payload" },
+  { key: "msisdn", label: "step_msisdn" },
+  { key: "consent", label: "step_consent" },
+  { key: "selfie", label: "step_selfie" },
+  { key: "document", label: "step_document" },
+  { key: "ocr", label: "step_ocr" },
+  { key: "signature", label: "step_signature" },
+  { key: "match", label: "step_match" },
+  // { key: "review", label: "step_review" },
 ];
 
 // ── Camera constraints ────────────────────────────────────────────────────────

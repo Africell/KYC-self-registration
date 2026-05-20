@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { mapFieldKey } from "../../lib/utils";
 import type { ExtractedFields } from "../../types/kyc";
 
@@ -14,7 +15,8 @@ interface OCRStepProps {
 }
 
 type FieldRow = {
-  label: string;
+  label:    string;
+  labelKey: string;
   optional?: boolean;
   type?: "text" | "dropdown";
   options?: string[];
@@ -23,26 +25,26 @@ type FieldRow = {
 const GENDER_OPTIONS = ["Male", "Female"];
 
 const FIELD_ROWS: FieldRow[] = [
-  { label: "First name" },
-  { label: "Middle name", optional: true },
-  { label: "Last name" },
-  { label: "Email" },
-  { label: "Address" },
-  { label: "Document number" },
-  { label: "Nationality" },
-  { label: "Birth date" },
-  { label: "Expiry date" },
-  { label: "Gender", type: "dropdown", options: GENDER_OPTIONS },
+  { label: "First name",      labelKey: "ocr_field_first" },
+  { label: "Middle name",     labelKey: "ocr_field_middle", optional: true },
+  { label: "Last name",       labelKey: "ocr_field_last" },
+  { label: "Email",           labelKey: "ocr_field_email" },
+  { label: "Address",         labelKey: "ocr_field_address" },
+  { label: "Document number", labelKey: "ocr_field_doc_number" },
+  { label: "Nationality",     labelKey: "ocr_field_nationality" },
+  { label: "Birth date",      labelKey: "ocr_field_birth" },
+  { label: "Expiry date",     labelKey: "ocr_field_expiry" },
+  { label: "Gender",          labelKey: "ocr_field_gender", type: "dropdown", options: GENDER_OPTIONS },
 ];
 
 const NATIONAL_ID_FIELD_ROWS: FieldRow[] = [
-  { label: "First name" },
-  { label: "Middle name", optional: true },
-  { label: "Last name" },
-  { label: "Email" },
-  { label: "Address" },
-  { label: "Birth date" },
-  { label: "Gender", type: "dropdown", options: GENDER_OPTIONS },
+  { label: "First name",  labelKey: "ocr_field_first" },
+  { label: "Middle name", labelKey: "ocr_field_middle", optional: true },
+  { label: "Last name",   labelKey: "ocr_field_last" },
+  { label: "Email",       labelKey: "ocr_field_email" },
+  { label: "Address",     labelKey: "ocr_field_address" },
+  { label: "Birth date",  labelKey: "ocr_field_birth" },
+  { label: "Gender",      labelKey: "ocr_field_gender", type: "dropdown", options: GENDER_OPTIONS },
 ];
 
 const inputBase =
@@ -50,26 +52,28 @@ const inputBase =
 
 function normalizeGender(raw: string): string {
   const lower = raw.trim().toLowerCase();
-  if (lower === "m" || lower === "male") return "Male";
+  if (lower === "m" || lower === "male")   return "Male";
   if (lower === "f" || lower === "female") return "Female";
   return raw;
 }
 
-function fieldError(label: string, value: string): string | null {
-  const row = FIELD_ROWS.find((r) => r.label === label)!;
-  if (row.optional) return null;
+function fieldErrorKey(label: string, value: string, rows: FieldRow[]): string | null {
+  const row = rows.find((r) => r.label === label);
+  if (!row || row.optional) return null;
   const val = value.trim();
   if (label === "Gender") {
-    if (!val) return "Gender is required";
-    if (!GENDER_OPTIONS.includes(val)) return "Please select gender";
+    if (!val) return "ocr_error_gender";
+    if (!GENDER_OPTIONS.includes(val)) return "ocr_error_gender_select";
     return null;
   }
-  if (!val) return `${label} is required`;
+  if (!val) return "ocr_error_required";
   return null;
 }
 
 export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrzValid, mrzMessage, busy, docType }: OCRStepProps) {
+  const { t } = useTranslation();
   const activeFieldRows = docType === "national_id" ? NATIONAL_ID_FIELD_ROWS : FIELD_ROWS;
+
   const [touched, setTouched] = useState<Record<string, boolean>>(() => {
     const raw = String(fields.Gender ?? "").trim();
     const normalized = normalizeGender(raw);
@@ -77,7 +81,7 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
     return {};
   });
   const [submitted, setSubmitted] = useState(false);
-  const [showRaw, setShowRaw] = useState(false);
+  const [showRaw, setShowRaw]     = useState(false);
 
   useEffect(() => {
     const raw = String(fields.Gender ?? "").trim();
@@ -95,7 +99,7 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
     return submitted || !!touched[mapFieldKey(label)];
   }
 
-  const hasErrors = activeFieldRows.some((r) => fieldError(r.label, getValue(r.label)) !== null);
+  const hasErrors = activeFieldRows.some((r) => fieldErrorKey(r.label, getValue(r.label), activeFieldRows) !== null);
 
   function handleRunFaceMatch() {
     setSubmitted(true);
@@ -104,34 +108,36 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
   }
 
   const mrzColor = mrzValid === null ? "text-slate-400" : mrzValid ? "text-emerald-400" : "text-amber-400";
-  const mrzLabel = mrzValid === null ? "Not available" : mrzValid ? "Valid" : "Invalid or partial";
+  const mrzLabel = mrzValid === null ? t("ocr_mrz_na") : mrzValid ? t("ocr_mrz_valid") : t("ocr_mrz_invalid");
 
   return (
     <section className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold text-slate-100">Review extracted data</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Check and correct the fields below. All fields except Middle name are required.
-        </p>
+        <h2 className="text-xl font-semibold text-slate-100">{t("ocr_title")}</h2>
+        <p className="mt-1 text-sm text-slate-400">{t("ocr_subtitle")}</p>
       </div>
 
       {/* Fields grid */}
       <div className="grid gap-3 sm:grid-cols-2">
-        {activeFieldRows.map(({ label, optional, type, options }) => {
-          const key = mapFieldKey(label) as keyof ExtractedFields;
-          const value = getValue(label);
-          const error = fieldError(label, value);
-          const showErr = !!error && showError(label);
+        {activeFieldRows.map(({ label, labelKey, optional, type, options }) => {
+          const key      = mapFieldKey(label) as keyof ExtractedFields;
+          const value    = getValue(label);
+          const errKey   = fieldErrorKey(label, value, activeFieldRows);
+          const showErr  = !!errKey && showError(label);
           const borderClass = showErr
             ? "border-rose-500 focus:border-rose-400"
             : "border-slate-700 focus:border-cyan-500";
 
+          const errorMsg = errKey === "ocr_error_required"
+            ? t("ocr_error_required", { field: t(labelKey) })
+            : errKey ? t(errKey) : null;
+
           return (
             <label key={label} className="block text-sm">
               <div className="mb-1.5 flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-                {label}
+                {t(labelKey)}
                 {optional
-                  ? <span className="normal-case text-slate-600 font-normal">(optional)</span>
+                  ? <span className="normal-case text-slate-600 font-normal">{t("ocr_optional")}</span>
                   : <span className="text-rose-400">*</span>
                 }
               </div>
@@ -143,8 +149,12 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
                   onBlur={() => setTouched((prev) => ({ ...prev, [key]: true }))}
                   className={`${inputBase} ${borderClass} cursor-pointer`}
                 >
-                  <option value="">— Select —</option>
-                  {options!.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                  <option value="">{t("ocr_select")}</option>
+                  {options!.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt === "Male" ? t("ocr_male") : opt === "Female" ? t("ocr_female") : opt}
+                    </option>
+                  ))}
                 </select>
               ) : (
                 <input
@@ -155,16 +165,16 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
                 />
               )}
 
-              {showErr && <p className="mt-1 text-xs text-rose-400">{error}</p>}
+              {showErr && <p className="mt-1 text-xs text-rose-400">{errorMsg}</p>}
             </label>
           );
         })}
       </div>
 
-      {/* MRZ status (compact) */}
+      {/* MRZ/OCR status */}
       <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/40 px-4 py-3">
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-slate-400">{docType === "national_id" ? "OCR:" : "MRZ:"}</span>
+          <span className="text-slate-400">{docType === "national_id" ? t("ocr_label_ocr") : t("ocr_label_mrz")}</span>
           <span className={`font-medium ${mrzColor}`}>{mrzLabel}</span>
           {mrzMessage && <span className="text-xs text-slate-500 hidden sm:inline">— {mrzMessage}</span>}
         </div>
@@ -172,7 +182,7 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
           onClick={() => setShowRaw((v) => !v)}
           className="text-xs text-slate-400 hover:text-slate-200 transition-colors underline underline-offset-2"
         >
-          {showRaw ? "Hide" : "Show"} raw data
+          {showRaw ? t("ocr_hide") : t("ocr_show")} {t("ocr_raw_suffix")}
         </button>
       </div>
 
@@ -180,15 +190,15 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
       {showRaw && (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Raw MRZ</p>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">{t("ocr_raw_mrz_title")}</p>
             <pre className="overflow-auto rounded-lg bg-slate-900 p-2.5 text-xs text-slate-300 whitespace-pre-wrap max-h-40">
-              {fields.rawMRZ || "No MRZ extracted."}
+              {fields.rawMRZ || t("ocr_raw_mrz_empty")}
             </pre>
           </div>
           <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Raw OCR text</p>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">{t("ocr_raw_ocr_title")}</p>
             <pre className="overflow-auto rounded-lg bg-slate-900 p-2.5 text-xs text-slate-300 whitespace-pre-wrap max-h-40">
-              {fields.rawOCRText || "No OCR text available."}
+              {fields.rawOCRText || t("ocr_raw_ocr_empty")}
             </pre>
           </div>
         </div>
@@ -196,7 +206,7 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
 
       {submitted && hasErrors && (
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-          Please fill in all required fields before continuing.
+          {t("ocr_error_fill")}
         </div>
       )}
 
@@ -208,7 +218,7 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
           </svg>
-          Back
+          {t("back")}
         </button>
         <button
           onClick={handleRunFaceMatch}
@@ -218,13 +228,10 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
           {busy ? (
             <>
               <span className="h-4 w-4 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" />
-              Running…
+              {t("ocr_running")}
             </>
           ) : (
-            <p>
-             
-             Next
-            </p>
+            t("next")
           )}
         </button>
       </div>

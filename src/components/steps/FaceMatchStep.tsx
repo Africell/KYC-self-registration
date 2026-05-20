@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CheckCircle2, Send, RotateCcw } from "lucide-react";
 import type { FaceMatchResult } from "../../types/kyc";
 import * as faceapi from "face-api.js";
@@ -63,12 +64,12 @@ async function buildDebugCrops(
 }
 
 export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, prevStep, onSubmit, onReset }: Props) {
+  const { t } = useTranslation();
   const [debugCrops, setDebugCrops] = useState<{ selfie: string; doc: string; selfieBox: string; docBox: string } | null>(null);
   const [debugLoading, setDebugLoading] = useState(false);
-  // const [showDebug, setShowDebug] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting]     = useState(false);
+  const [submitted, setSubmitted]       = useState(false);
+  const [submitError, setSubmitError]   = useState<string | null>(null);
   const didRun = useRef(false);
 
   async function handleSubmit() {
@@ -78,7 +79,7 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
       await onSubmit();
       setSubmitted(true);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+      setSubmitError(err instanceof Error ? err.message : t("match_error_submit"));
     } finally {
       setSubmitting(false);
     }
@@ -93,7 +94,6 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
 
   const passed = faceMatch?.passed;
 
-  // ── Success screen ────────────────────────────────────────────────────────
   if (submitted) {
     return (
       <section className="flex flex-col items-center gap-6 py-12 text-center">
@@ -101,17 +101,16 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
           <CheckCircle2 size={56} className="text-emerald-400" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold text-slate-100">Thank You!</h2>
+          <h2 className="text-2xl font-semibold text-slate-100">{t("match_success_title")}</h2>
           <p className="text-slate-400 max-w-sm mx-auto text-sm leading-relaxed">
-            Your registration has been submitted successfully. We will review
-            your information and get back to you shortly.
+            {t("match_success_desc")}
           </p>
         </div>
         <button
           onClick={onReset}
           className="mt-2 flex items-center gap-2 rounded-2xl border border-slate-700 px-6 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800 transition-colors"
         >
-          <RotateCcw size={15} /> Start New Registration
+          <RotateCcw size={15} /> {t("match_btn_new")}
         </button>
       </section>
     );
@@ -120,59 +119,38 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
   return (
     <section className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold text-slate-100">Face match result</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Your selfie is compared against your document photo using on-device face recognition.
-        </p>
+        <h2 className="text-xl font-semibold text-slate-100">{t("match_title")}</h2>
+        <p className="mt-1 text-sm text-slate-400">{t("match_subtitle")}</p>
       </div>
 
-      {/* Images */}
-      {/* <div className="grid gap-3 grid-cols-2">
-        {[
-          { label: "Selfie", src: selfieImage, alt: "Selfie" },
-          { label: "Document photo", src: documentImage, alt: "Document" },
-        ].map(({ label, src, alt }) => (
-          <div key={label} className="rounded-2xl border border-slate-700 bg-slate-900/60 p-3">
-            <p className="mb-2 text-xs font-medium text-slate-400">{label}</p>
-            {src
-              ? <img src={src} alt={alt} className="w-full rounded-xl object-cover aspect-3/4" />
-              : <div className="flex aspect-3/4 items-center justify-center rounded-xl bg-slate-800 text-xs text-slate-500">No image</div>
-            }
-          </div>
-        ))}
-      </div> */}
-
-         <div className="rounded-xl border border-slate-700/50 bg-slate-900/40">
-      
-          <div className="border-t border-slate-700/50 p-4 space-y-3">
-            {debugLoading && <p className="text-xs text-amber-300 animate-pulse">Running crop detection…</p>}
-            {debugCrops && (
-              <>
-                <div className="grid gap-3 grid-cols-2">
-                  {[
-                    { label: "Selfie crop (224×224)", src: debugCrops.selfie, alt: "Selfie crop" },
-                    { label: "Document crop (224×224)", src: debugCrops.doc, alt: "Document crop" },
-                  ].map(({ label, src, alt }) => (
-                    <div key={label} className="rounded-xl bg-slate-900 p-2">
-                      <p className="mb-1.5 text-xs text-slate-500">{label}</p>
-                      <img src={src} alt={alt} className="w-full rounded-lg" style={{ imageRendering: "pixelated" }} />
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-1">
-                  {[debugCrops.selfieBox, debugCrops.docBox].map((info) => (
-                    <div key={info} className={`rounded-lg px-3 py-2 text-xs font-mono ${info.includes("❌") ? "bg-red-950 text-red-300" : "bg-slate-900 text-emerald-300"}`}>
-                      {info}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-       
+      <div className="rounded-xl border border-slate-700/50 bg-slate-900/40">
+        <div className="border-t border-slate-700/50 p-4 space-y-3">
+          {debugLoading && <p className="text-xs text-amber-300 animate-pulse">{t("match_loading")}</p>}
+          {debugCrops && (
+            <>
+              <div className="grid gap-3 grid-cols-2">
+                {[
+                  { labelKey: "match_crop_selfie", src: debugCrops.selfie, alt: "Selfie crop" },
+                  { labelKey: "match_crop_doc",    src: debugCrops.doc,    alt: "Document crop" },
+                ].map(({ labelKey, src, alt }) => (
+                  <div key={labelKey} className="rounded-xl bg-slate-900 p-2">
+                    <p className="mb-1.5 text-xs text-slate-500">{t(labelKey)}</p>
+                    <img src={src} alt={alt} className="w-full rounded-lg" style={{ imageRendering: "pixelated" }} />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1">
+                {[debugCrops.selfieBox, debugCrops.docBox].map((info) => (
+                  <div key={info} className={`rounded-lg px-3 py-2 text-xs font-mono ${info.includes("❌") ? "bg-red-950 text-red-300" : "bg-slate-900 text-emerald-300"}`}>
+                    {info}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Decision */}
       {faceMatch ? (
         <div className={`rounded-2xl border p-4 ${passed ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`}>
           <div className="mb-3 flex items-center gap-2">
@@ -181,25 +159,25 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
                 <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
                 </svg>
-                Match passed
+                {t("match_passed")}
               </span>
             ) : (
               <span className="flex items-center gap-1.5 text-sm font-semibold text-amber-400">
                 <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                 </svg>
-                Review needed
+                {t("match_review")}
               </span>
             )}
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             {[
-              { label: "Similarity", value: `${faceMatch.similarity}%` },
-              { label: "Distance", value: String(faceMatch.distance) },
-              { label: "Threshold", value: String(faceMatch.threshold) },
-            ].map(({ label, value }) => (
-              <div key={label} className="rounded-xl bg-slate-900/60 px-3 py-3">
-                <p className="text-xs text-slate-500 mb-1">{label}</p>
+              { labelKey: "match_similarity", value: `${faceMatch.similarity}%` },
+              { labelKey: "match_distance",   value: String(faceMatch.distance) },
+              { labelKey: "match_threshold",  value: String(faceMatch.threshold) },
+            ].map(({ labelKey, value }) => (
+              <div key={labelKey} className="rounded-xl bg-slate-900/60 px-3 py-3">
+                <p className="text-xs text-slate-500 mb-1">{t(labelKey)}</p>
                 <p className="text-lg font-bold text-cyan-300 tabular-nums">{value}</p>
               </div>
             ))}
@@ -207,16 +185,13 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
         </div>
       ) : (
         <div className="rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-6 text-center text-sm text-slate-500">
-          No match result yet.
+          {t("match_no_result")}
         </div>
       )}
 
-     
-   
-
       {submitError && (
         <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-          <span className="font-semibold uppercase tracking-wide text-rose-400 mr-2">Error</span>
+          <span className="font-semibold uppercase tracking-wide text-rose-400 mr-2">{t("match_error")}</span>
           {submitError}
         </div>
       )}
@@ -230,7 +205,7 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
           </svg>
-          Back
+          {t("back")}
         </button>
         <button
           onClick={() => void handleSubmit()}
@@ -240,11 +215,11 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
           {submitting ? (
             <>
               <span className="w-4 h-4 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" />
-              Submitting…
+              {t("match_submitting")}
             </>
           ) : (
             <>
-              <Send size={15} /> Submit Registration
+              <Send size={15} /> {t("match_submit")}
             </>
           )}
         </button>

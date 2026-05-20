@@ -125,7 +125,7 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
   );
 
   return (
-    <div className="p-5 space-y-6">
+    <div className="p-6 space-y-5">
       {!imageSrc && (
         <input
           type="file"
@@ -137,7 +137,7 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
       {!!imgSrc && (
         <>
           <div
-            className="overflow-auto rounded-xl border border-slate-300 bg-slate-100 p-4"
+            className="overflow-auto rounded-xl border border-slate-700 bg-slate-800 p-4"
             onMouseMove={handleMouseMove}
             onMouseUp={() => setIsRotating(false)}
             onMouseLeave={() => setIsRotating(false)}
@@ -174,14 +174,14 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
           <div className="flex flex-wrap gap-3">
             <button
               onClick={handleCropImage}
-              className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700"
+              className="rounded-xl bg-slate-700 px-5 py-2 text-sm font-medium text-slate-100 hover:bg-slate-600 border border-slate-600"
             >
               Crop Image
             </button>
 
             <button
               onClick={() => setRotation(0)}
-              className="rounded-lg bg-slate-600 px-5 py-2 text-white hover:bg-slate-700"
+              className="rounded-xl border border-slate-700 px-5 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
             >
               Reset Rotation
             </button>
@@ -189,7 +189,7 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
             {onConfirm && (
               <button
                 onClick={() => onConfirm(croppedImage || imgSrc)}
-                className="rounded-lg bg-green-600 px-5 py-2 text-white hover:bg-green-700"
+                className="rounded-xl bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-400"
               >
                 Confirm
               </button>
@@ -198,7 +198,7 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
             {onCancel && (
               <button
                 onClick={onCancel}
-                className="rounded-lg bg-red-500 px-5 py-2 text-white hover:bg-red-600"
+                className="rounded-xl border border-rose-500/50 bg-rose-500/10 px-5 py-2 text-sm font-medium text-rose-300 hover:bg-rose-500/20"
               >
                 Cancel
               </button>

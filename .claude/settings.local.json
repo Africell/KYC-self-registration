@@ -10,7 +10,9 @@
       "Bash(npm install *)",
       "Bash(node -e ' *)",
       "Bash(findstr /S \"national_id\\\\|IdDocType\\\\|document.type\\\\|docType\" *.tsx *.ts)",
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\layla.abosaad\\\\OneDrive - Africell\\\\Desktop\\\\proj\\\\proj\\\\src\" -Filter \"*.json\" -Recurse)"
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\layla.abosaad\\\\OneDrive - Africell\\\\Desktop\\\\proj\\\\proj\\\\src\" -Filter \"*.json\" -Recurse)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\layla.abosaad\\\\OneDrive - Africell\\\\Desktop\\\\proj\\\\proj\\\\src\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   }
 }

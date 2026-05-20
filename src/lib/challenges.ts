@@ -1,5 +1,8 @@
 // src/lib/challenges.ts
 
+import {
+  Crosshair, ArrowLeft, ArrowRight, Hand, ArrowUpDown, ZoomIn,
+} from "lucide-react";
 import type { ChallengeConfig, LivenessChallenge } from "../types/kyc";
 
 // Yaw value (0-1 normalised) the user must reach to pass a head-turn challenge.
@@ -11,7 +14,7 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
     id: "center",
     label: "Face Forward",
     instruction: "Look directly at the camera.",
-    icon: "🎯",
+    icon: Crosshair,
     requiresHand: false,
     requiresPose: false,
   },
@@ -19,7 +22,7 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
     id: "lookLeft",
     label: "Look Left",
     instruction: "Slowly turn your head to your left.",
-    icon: "👈",
+    icon: ArrowLeft,
     requiresHand: false,
     requiresPose: false,
   },
@@ -27,7 +30,7 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
     id: "lookRight",
     label: "Look Right",
     instruction: "Slowly turn your head to your right.",
-    icon: "👉",
+    icon: ArrowRight,
     requiresHand: false,
     requiresPose: false,
   },
@@ -35,7 +38,7 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
     id: "raiseLeftHand",
     label: "Raise Left Hand",
     instruction: "Raise your left hand above your shoulder.",
-    icon: "🤚",
+    icon: Hand,
     requiresHand: false,
     requiresPose: true,
   },
@@ -43,7 +46,7 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
     id: "raiseRightHand",
     label: "Raise Right Hand",
     instruction: "Raise your right hand above your shoulder.",
-    icon: "✋",
+    icon: Hand,
     requiresHand: false,
     requiresPose: true,
   },
@@ -51,7 +54,7 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
     id: "nodHead",
     label: "Nod Your Head",
     instruction: "Nod your head up and down slowly.",
-    icon: "🙆",
+    icon: ArrowUpDown,
     requiresHand: false,
     requiresPose: true,
   },
@@ -59,11 +62,10 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
     id: "moveCloser",
     label: "Move Closer",
     instruction: "Move your face closer to the camera.",
-    icon: "🔍",
+    icon: ZoomIn,
     requiresHand: false,
     requiresPose: false,
   },
- 
 };
 
 /**

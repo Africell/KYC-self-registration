@@ -1,4 +1,5 @@
 
+import { Check, RotateCcw, Sparkles } from "lucide-react";
 import type { LivenessPhase } from "../../../../hooks/useFaceLiveness";
 import type { CaptureStatus } from "../../../../hooks/useSelfie";
 
@@ -52,14 +53,14 @@ export function StatusBanner({
 
   if (capturePhase === "front-captured") return (
     <div className="flex items-center gap-3 rounded-2xl bg-emerald-950/60 border border-emerald-700/50 px-4 py-3">
-      <span className="text-emerald-400 text-lg shrink-0">✓</span>
+      <Check size={18} className="text-emerald-400 shrink-0" />
       <p className="text-sm text-emerald-200 font-medium">Front photo captured! Preparing side photo…</p>
     </div>
   );
 
   if (capturePhase === "side-guide") return (
     <div className="flex items-center gap-3 rounded-2xl bg-slate-800/80 border border-slate-700 px-4 py-3">
-      <span className="text-2xl shrink-0">↩️</span>
+      <RotateCcw size={22} className="text-slate-300 shrink-0" />
       <div>
         <p className="text-sm text-white font-medium">Now take a side photo</p>
         <p className="text-xs text-slate-400 mt-0.5">
@@ -71,14 +72,14 @@ export function StatusBanner({
 
   if (capturePhase === "side-ready") return (
     <div className="flex items-center gap-3 rounded-2xl bg-emerald-950/60 border border-emerald-700/50 px-4 py-3">
-      <span className="text-emerald-400 text-lg shrink-0">✓</span>
+      <Check size={18} className="text-emerald-400 shrink-0" />
       <p className="text-sm text-emerald-200 font-medium">Perfect angle! Tap the button to capture.</p>
     </div>
   );
 
   if (capturePhase === "side-captured" || capturePhase === "complete") return (
     <div className="flex items-center gap-3 rounded-2xl bg-emerald-950/60 border border-emerald-700/50 px-4 py-3">
-      <span className="text-emerald-400 text-lg shrink-0">🎉</span>
+      <Sparkles size={18} className="text-emerald-400 shrink-0" />
       <p className="text-sm text-emerald-200 font-medium">All photos captured! Proceeding…</p>
     </div>
   );

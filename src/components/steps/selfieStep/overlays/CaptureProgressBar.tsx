@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import type { CaptureStatus } from "../../../../hooks/useSelfie";
 import { PROGRESS_STEPS, PHASE_TO_STEP } from "../selfie.constants";
 
@@ -21,9 +22,9 @@ export function CaptureProgressBar({ phase }: CaptureProgressBarProps) {
               : active  ? "bg-cyan-900/60 border border-cyan-700 text-cyan-200"
               :           "bg-slate-800/60 border border-slate-700 text-slate-500"
             }`}>
-              <span>{s.icon}</span>
+              {(() => { const Icon = s.icon; return <Icon size={13} />; })()}
               <span className="truncate">{s.label}</span>
-              {done   && <span className="ml-auto">✓</span>}
+              {done   && <Check size={13} className="ml-auto shrink-0" />}
               {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block" />}
             </div>
 

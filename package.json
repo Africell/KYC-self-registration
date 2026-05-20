@@ -16,6 +16,7 @@
     "face-api.js": "^0.22.2",
     "i18next": "^26.0.8",
     "i18next-browser-languagedetector": "^8.2.1",
+    "lucide-react": "^1.16.0",
     "mrz": "^5.0.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

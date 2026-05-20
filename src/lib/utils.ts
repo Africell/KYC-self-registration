@@ -14,11 +14,12 @@ export function variance(values: number[]): number {
   return mean(values.map((value) => (value - avg) ** 2));
 }
 
-export function similarityFromDistance(distance: number): number {
-  // Centered at 0.55 (slightly above threshold) so near-matches
-  // display as a reasonable percentage rather than collapsing to ~30%
-  const similarity = 1 / (1 + Math.exp((distance - 0.55) * 10));
-  return Number((similarity * 100).toFixed(2));
+export function similarityFromDistance(distance: number, threshold = 0.52): number {
+  if (distance >= threshold) return 0;
+  // Square-root curve: same-person matches (0.2–0.4) display as 65–90%,
+  // borderline matches taper to 0 exactly at the decision boundary.
+  const ratio = 1 - distance / threshold;
+  return Number((Math.sqrt(ratio) * 100).toFixed(2));
 }
 
 export function mapFieldKey(label: string): keyof ExtractedFields {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, Send, RotateCcw } from "lucide-react";
 import type { FaceMatchResult } from "../../types/kyc";
 import * as faceapi from "face-api.js";
 import { dataUrlToImage } from "../../utils/image";
@@ -8,7 +9,8 @@ type Props = {
   documentImage: string;
   faceMatch: FaceMatchResult | null;
   prevStep: () => void;
-  nextStep: () => void;
+  onSubmit: () => Promise<void>;
+  onReset: () => void;
 };
 
 async function buildDebugCrops(
@@ -60,11 +62,27 @@ async function buildDebugCrops(
   return { selfie: selfieResult.cropped, doc: docResult.cropped, selfieBox: selfieResult.boxInfo, docBox: docResult.boxInfo };
 }
 
-export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, prevStep, nextStep }: Props) {
+export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, prevStep, onSubmit, onReset }: Props) {
   const [debugCrops, setDebugCrops] = useState<{ selfie: string; doc: string; selfieBox: string; docBox: string } | null>(null);
   const [debugLoading, setDebugLoading] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const didRun = useRef(false);
+
+  async function handleSubmit() {
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      await onSubmit();
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   useEffect(() => {
     if (!selfieImage || !documentImage || didRun.current) return;
@@ -74,6 +92,30 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
   }, [selfieImage, documentImage]);
 
   const passed = faceMatch?.passed;
+
+  // ── Success screen ────────────────────────────────────────────────────────
+  if (submitted) {
+    return (
+      <section className="flex flex-col items-center gap-6 py-12 text-center">
+        <div className="rounded-full bg-emerald-500/10 border border-emerald-500/30 p-6">
+          <CheckCircle2 size={56} className="text-emerald-400" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold text-slate-100">Thank You!</h2>
+          <p className="text-slate-400 max-w-sm mx-auto text-sm leading-relaxed">
+            Your registration has been submitted successfully. We will review
+            your information and get back to you shortly.
+          </p>
+        </div>
+        <button
+          onClick={onReset}
+          className="mt-2 flex items-center gap-2 rounded-2xl border border-slate-700 px-6 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+        >
+          <RotateCcw size={15} /> Start New Registration
+        </button>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-5">
@@ -85,7 +127,7 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
       </div>
 
       {/* Images */}
-      <div className="grid gap-3 grid-cols-2">
+      {/* <div className="grid gap-3 grid-cols-2">
         {[
           { label: "Selfie", src: selfieImage, alt: "Selfie" },
           { label: "Document photo", src: documentImage, alt: "Document" },
@@ -98,6 +140,36 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
             }
           </div>
         ))}
+      </div> */}
+
+         <div className="rounded-xl border border-slate-700/50 bg-slate-900/40">
+      
+          <div className="border-t border-slate-700/50 p-4 space-y-3">
+            {debugLoading && <p className="text-xs text-amber-300 animate-pulse">Running crop detection…</p>}
+            {debugCrops && (
+              <>
+                <div className="grid gap-3 grid-cols-2">
+                  {[
+                    { label: "Selfie crop (224×224)", src: debugCrops.selfie, alt: "Selfie crop" },
+                    { label: "Document crop (224×224)", src: debugCrops.doc, alt: "Document crop" },
+                  ].map(({ label, src, alt }) => (
+                    <div key={label} className="rounded-xl bg-slate-900 p-2">
+                      <p className="mb-1.5 text-xs text-slate-500">{label}</p>
+                      <img src={src} alt={alt} className="w-full rounded-lg" style={{ imageRendering: "pixelated" }} />
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  {[debugCrops.selfieBox, debugCrops.docBox].map((info) => (
+                    <div key={info} className={`rounded-lg px-3 py-2 text-xs font-mono ${info.includes("❌") ? "bg-red-950 text-red-300" : "bg-slate-900 text-emerald-300"}`}>
+                      {info}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+       
       </div>
 
       {/* Decision */}
@@ -139,51 +211,21 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
         </div>
       )}
 
-      {/* Debug — collapsed by default */}
-      <div className="rounded-xl border border-slate-700/50 bg-slate-900/40">
-        <button
-          onClick={() => setShowDebug((v) => !v)}
-          className="flex w-full items-center justify-between px-4 py-3 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-        >
-          <span className="uppercase tracking-wide font-medium">Debug: face-api crop view</span>
-          <svg className={`h-4 w-4 transition-transform ${showDebug ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
+     
+   
 
-        {showDebug && (
-          <div className="border-t border-slate-700/50 p-4 space-y-3">
-            {debugLoading && <p className="text-xs text-amber-300 animate-pulse">Running crop detection…</p>}
-            {debugCrops && (
-              <>
-                <div className="grid gap-3 grid-cols-2">
-                  {[
-                    { label: "Selfie crop (224×224)", src: debugCrops.selfie, alt: "Selfie crop" },
-                    { label: "Document crop (224×224)", src: debugCrops.doc, alt: "Document crop" },
-                  ].map(({ label, src, alt }) => (
-                    <div key={label} className="rounded-xl bg-slate-900 p-2">
-                      <p className="mb-1.5 text-xs text-slate-500">{label}</p>
-                      <img src={src} alt={alt} className="w-full rounded-lg" style={{ imageRendering: "pixelated" }} />
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-1">
-                  {[debugCrops.selfieBox, debugCrops.docBox].map((info) => (
-                    <div key={info} className={`rounded-lg px-3 py-2 text-xs font-mono ${info.includes("❌") ? "bg-red-950 text-red-300" : "bg-slate-900 text-emerald-300"}`}>
-                      {info}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      {submitError && (
+        <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          <span className="font-semibold uppercase tracking-wide text-rose-400 mr-2">Error</span>
+          {submitError}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3 border-t border-slate-700/60 pt-4">
         <button
           onClick={prevStep}
-          className="flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800"
+          disabled={submitting}
+          className="flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -191,13 +233,20 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
           Back
         </button>
         <button
-          onClick={nextStep}
-          className="flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400"
+          onClick={() => void handleSubmit()}
+          disabled={submitting || !faceMatch}
+          className="flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Continue
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
+          {submitting ? (
+            <>
+              <span className="w-4 h-4 rounded-full border-2 border-slate-950/30 border-t-slate-950 animate-spin" />
+              Submitting…
+            </>
+          ) : (
+            <>
+              <Send size={15} /> Submit Registration
+            </>
+          )}
         </button>
       </div>
     </section>

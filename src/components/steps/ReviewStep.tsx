@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SubmissionPayload } from "../../types/kyc";
 import { truncateDeep } from "../../utils/image";
 import { apiSubmitSIMRegistration, type SIMRegistrationPayload } from "../../lib/api/kyc.api";
 import axios from "axios";
-import { clearOTPTokenFromStorage, clearSession } from "../../lib/services/session.service";
 
 const TOKEN_STORAGE_KEY = "kyc_otp_token";
 
@@ -37,6 +36,12 @@ export default function ReviewStep({ internalPayload, backendPayload, prevStep, 
   const [submitState, setSubmitState] = useState<SubmitState>({ status: "idle" });
   const [showDebug, setShowDebug] = useState(false);
 
+  useEffect(() => {
+    if (submitState.status === "success") {
+      localStorage.clear();
+    }
+  }, [submitState.status]);
+
   const handleSubmit = async () => {
     try {
       setSubmitState({ status: "loading" });
@@ -46,12 +51,11 @@ export default function ReviewStep({ internalPayload, backendPayload, prevStep, 
         return;
       }
       const response = await apiSubmitSIMRegistration(backendPayload, token);
-      clearSession();
-      clearOTPTokenFromStorage();
       setSubmitState({ status: "success", data: response });
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const body = err.response?.data;
+        console.log("what is body", body)
         const message = body?.ErrorDescription || body?.StatusDescription || err.message || "Unexpected error occurred.";
         setSubmitState({ status: "error", message });
       } else {
@@ -63,6 +67,28 @@ export default function ReviewStep({ internalPayload, backendPayload, prevStep, 
   const isLoading = submitState.status === "loading";
   const isSuccess = submitState.status === "success";
 
+  if (isSuccess) {
+    return (
+      <section className="flex flex-col items-center justify-center gap-6 py-12 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/30">
+          <svg className="h-10 w-10 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-2xl font-semibold text-slate-100">Thank you!</h2>
+          <p className="mt-2 text-sm text-slate-400">Your SIM registration has been submitted successfully.</p>
+        </div>
+        <button
+          onClick={resetFlow}
+          className="rounded-xl bg-cyan-500 px-6 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400"
+        >
+          Start a new registration
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-5">
       <div>
@@ -71,21 +97,6 @@ export default function ReviewStep({ internalPayload, backendPayload, prevStep, 
           Confirm the data below before sending to the backend.
         </p>
       </div>
-
-      {/* Success banner */}
-      {isSuccess && (
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-          <div className="flex items-center gap-2 text-emerald-300 font-semibold text-sm mb-2">
-            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-            </svg>
-            Registration submitted successfully
-          </div>
-          <pre className="overflow-auto rounded-xl bg-emerald-950/60 p-3 text-xs text-emerald-200 whitespace-pre-wrap max-h-40">
-            {JSON.stringify((submitState as { status: "success"; data: unknown }).data, null, 2)}
-          </pre>
-        </div>
-      )}
 
       {/* Error banner */}
       {submitState.status === "error" && (

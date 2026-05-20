@@ -4,6 +4,8 @@
 // Centralised here so FaceOvalOverlay, SideGuideOverlay, and SelfieStep
 // all read from one source instead of duplicating magic numbers.
 
+import { ShieldCheck, Camera, RotateCcw } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { CaptureStatus } from "../../../hooks/useSelfie";
 
 // ── SVG guide oval geometry ───────────────────────────────────────────────────
@@ -28,11 +30,11 @@ export const TIMER_CIRC = 2 * Math.PI * TIMER_RADIUS;
 export const PROGRESS_STEPS: Array<{
   key: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
 }> = [
-  { key: "liveness", label: "Liveness", icon: "🛡️" },
-  { key: "front", label: "Front Photo", icon: "🤳" },
-  { key: "side", label: "Side Photo", icon: "↩️" },
+  { key: "liveness", label: "Liveness",    icon: ShieldCheck },
+  { key: "front",    label: "Front Photo", icon: Camera      },
+  { key: "side",     label: "Side Photo",  icon: RotateCcw   },
 ];
 
 // Maps CaptureStatus phase → which 0-based progress step is active.

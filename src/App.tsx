@@ -35,6 +35,8 @@ import FaceMatchStep from "./components/steps/FaceMatchStep";
 import ReviewStep from "./components/steps/ReviewStep";
 import { LanguageSwitcher } from "./components/layout/LanguageSwitcher";
 
+import { apiSubmitSIMRegistration } from "./lib/api/kyc.api";
+import { getStoredToken } from "./lib/services/msisdn.service";
 import { transformToBackendPayload } from "./utils/image";
 import type { SessionPatch } from "./lib/services/session.service";
 import DocumentStep from "./components/steps/document/DocumentStep";
@@ -296,6 +298,16 @@ export default function App(): JSX.Element {
     [internalPayload, msisdn, docType],
   );
 
+  // ── Submit ────────────────────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    const token = getStoredToken();
+    if (!token) throw new Error("Session expired. Please re-verify your phone number.");
+    const response = await apiSubmitSIMRegistration(backendPayload, token);
+    if (response.StatusCode !== 200 || response.Status !== "successful") {
+      throw new Error(response.StatusDescription || "Submission failed. Please try again.");
+    }
+  };
+
   // ── Reset ─────────────────────────────────────────────────────────────────
   const handleReset = () =>
     resetFlow(() => {
@@ -449,7 +461,8 @@ export default function App(): JSX.Element {
                 documentImage={documentImage}
                 faceMatch={faceMatch}
                 prevStep={prevStep}
-                nextStep={nextStep}
+                onSubmit={handleSubmit}
+                onReset={handleReset}
               />
             )}
 

@@ -27,11 +27,13 @@ export type LivenessChallenge =
   | "nodHead"
   | "moveCloser";
 
+import type { LucideIcon } from "lucide-react";
+
 export type ChallengeConfig = {
   id: LivenessChallenge;
   label: string;
   instruction: string;
-  icon: string;
+  icon: LucideIcon;
   requiresHand: boolean;
   requiresPose: boolean;
 };

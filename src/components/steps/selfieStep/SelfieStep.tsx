@@ -7,6 +7,7 @@ import type { CaptureStatus } from "../../../hooks/useSelfie";
 import type { LandmarkStatus, LivenessChallenge } from "../../../types/kyc";
 import { CHALLENGE_CONFIGS } from "../../../lib/challenges";
 
+import { AlarmClock, Camera, Check, Lock, RotateCcw } from "lucide-react";
 import { TIMER_RADIUS, TIMER_CIRC } from "./selfie.constants";
 import { TURN_YAW_TARGET } from "../../../lib/challenges";
 import { CaptureProgressBar } from "./overlays/CaptureProgressBar";
@@ -63,6 +64,7 @@ export default function SelfieStep({
   captureStatus,
 }: SelfieStepProps) {
   const currentConfig = CHALLENGE_CONFIGS[livenessChallenge];
+  const ChallengeIcon = currentConfig.icon;
   const {
     phase: capturePhase,
     countdown,
@@ -133,7 +135,8 @@ export default function SelfieStep({
               ? "Step 2 / 2 — Side"
               : "Step 1 / 2 — Front"
             : phase === "done"
-              ? "✓ Liveness verified"
+              ? <><Check size={10} className="inline-block mr-1 -mt-px" />Liveness verified</>
+
               : `Challenge ${challengeIndex + 1} / ${challengeSequence.length}`}
         </div>
       </div>
@@ -267,8 +270,9 @@ export default function SelfieStep({
                 <div className="text-[10px] sm:text-xs text-slate-400 uppercase tracking-wide mb-0.5">
                   Challenge {challengeIndex + 1} of {challengeSequence.length}
                 </div>
-                <div className="text-sm sm:text-base font-semibold text-white truncate">
-                  {currentConfig.icon} {currentConfig.label}
+                <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-white truncate">
+                  <ChallengeIcon size={18} className="shrink-0" />
+                  {currentConfig.label}
                 </div>
                 {(livenessChallenge === "lookLeft" || livenessChallenge === "lookRight") && (
                   <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
@@ -303,7 +307,7 @@ export default function SelfieStep({
           {/* TIMEOUT */}
           {phase === "timeout" && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 gap-4 sm:gap-5 px-6 text-center">
-              <div className="text-4xl sm:text-5xl animate-bounce">⏰</div>
+              <AlarmClock size={48} className="animate-bounce text-amber-400" />
               <p className="text-xl sm:text-2xl font-semibold text-white">Time's Up!</p>
               <p className="text-slate-300 text-sm max-w-xs">
                 You didn't complete the challenge in time. Let's try again.
@@ -336,9 +340,9 @@ export default function SelfieStep({
             <div className="absolute inset-0 flex items-end justify-center pb-6">
               <button
                 onClick={() => void captureFaceSidePhoto()}
-                className="rounded-2xl bg-emerald-500 px-8 py-3 min-h-12 font-semibold text-slate-950 hover:bg-emerald-400 active:bg-emerald-300 transition-all shadow-lg shadow-emerald-900/40 text-sm"
+                className="flex items-center gap-2 rounded-2xl bg-emerald-500 px-8 py-3 min-h-12 font-semibold text-slate-950 hover:bg-emerald-400 active:bg-emerald-300 transition-all shadow-lg shadow-emerald-900/40 text-sm"
               >
-                📸 Capture Side Photo
+                <Camera size={16} /> Capture Side Photo
               </button>
             </div>
           )}
@@ -372,6 +376,7 @@ export default function SelfieStep({
                     phase === "challenging" && i === challengeIndex;
                   const isFuture =
                     phase !== "done" && i > challengeIndex && !done;
+                  const CfgIcon = cfg.icon;
 
                   return (
                     <div
@@ -384,8 +389,8 @@ export default function SelfieStep({
                             : "bg-slate-900 opacity-50"
                       }`}
                     >
-                      <span className="text-lg">
-                        {isFuture ? "🔒" : cfg.icon}
+                      <span className="flex items-center justify-center w-5 h-5">
+                        {isFuture ? <Lock size={16} /> : <CfgIcon size={18} />}
                       </span>
                       <span
                         className={
@@ -398,13 +403,13 @@ export default function SelfieStep({
                       >
                         {isFuture ? "Locked" : cfg.label}
                       </span>
-                      <span className="ml-auto text-base">
+                      <span className="ml-auto flex items-center">
                         {done ? (
-                          "✓"
+                          <Check size={14} className="text-emerald-400" />
                         ) : isCurrent ? (
                           <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                         ) : (
-                          "○"
+                          <span className="w-2 h-2 rounded-full border border-slate-600 inline-block" />
                         )}
                       </span>
                     </div>
@@ -433,11 +438,11 @@ export default function SelfieStep({
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-base">🤳</span>
+                  <Camera size={15} className="shrink-0 text-slate-400" />
                   <span className="font-medium text-white">Front Photo</span>
                   {(capturePhase === "front-captured" || isSidePhase) && (
-                    <span className="ml-auto text-emerald-400 text-xs">
-                      ✓ Done
+                    <span className="ml-auto flex items-center gap-1 text-emerald-400 text-xs">
+                      <Check size={12} /> Done
                     </span>
                   )}
                   {(capturePhase === "front-guide" ||
@@ -465,12 +470,12 @@ export default function SelfieStep({
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-base">↩️</span>
+                  <RotateCcw size={15} className="shrink-0 text-slate-400" />
                   <span className="font-medium text-white">Side Photo</span>
                   {(capturePhase === "side-captured" ||
                     capturePhase === "complete") && (
-                    <span className="ml-auto text-emerald-400 text-xs">
-                      ✓ Done
+                    <span className="ml-auto flex items-center gap-1 text-emerald-400 text-xs">
+                      <Check size={12} /> Done
                     </span>
                   )}
                   {(capturePhase === "side-guide" ||
@@ -567,9 +572,9 @@ export default function SelfieStep({
         {capturePhase === "side-ready" && (
           <button
             onClick={() => void captureFaceSidePhoto()}
-            className="rounded-2xl bg-emerald-500 px-5 py-3 min-h-12 font-medium text-slate-950 hover:bg-emerald-400 active:bg-emerald-300 transition-colors"
+            className="flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 min-h-12 font-medium text-slate-950 hover:bg-emerald-400 active:bg-emerald-300 transition-colors"
           >
-            📸 Capture Side Photo
+            <Camera size={16} /> Capture Side Photo
           </button>
         )}
 

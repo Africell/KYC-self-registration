@@ -28,13 +28,13 @@ export function LanguageSwitcher({ timers }: Props) {
   return (
     <div className="flex items-center gap-3 flex-wrap">
       {/* Session timer */}
-      {timers.sessionActive && (
+      {/* {timers.sessionActive && (
         <TimerBadge
           label="Session"
           value={timers.sessionTimeLeft}
           expired={timers.sessionExpired}
         />
-      )}
+      )} */}
 
       {/* Language select */}
       <div className="relative">

@@ -137,6 +137,7 @@ export async function apiSubmitSIMRegistration(
       },
     },
   );
+  console.log("checking data returens on register", data)
   return data;
 }
 

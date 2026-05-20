@@ -10,7 +10,7 @@ export const steps: Step[] = [
   { key: "ocr", label: "OCR & MRZ" },
   { key: "signature", label: "Signature" },
   { key: "match", label: "Face Match" },
-  { key: "review", label: "Review Payload" },
+  // { key: "review", label: "Review Payload" },
 ];
 
 // ── Camera constraints ────────────────────────────────────────────────────────

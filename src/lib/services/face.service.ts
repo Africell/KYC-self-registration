@@ -263,7 +263,7 @@ export async function getBestFaceDescriptor(
 // ─── Match ─────────────────────────────────────────────────────────────────────
 
 export function getFaceMatchVerdict(distance: number): FaceMatchResult {
-  const similarity = similarityFromDistance(distance);
+  const similarity = similarityFromDistance(distance, FACE_MATCH_THRESHOLD);
   const passed = distance < FACE_MATCH_THRESHOLD;
   return {
     distance: Number(distance.toFixed(4)),

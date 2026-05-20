@@ -10,6 +10,7 @@ interface OCRStepProps {
   mrzValid: boolean | null;
   mrzMessage: string;
   busy: boolean;
+  docType: string;
 }
 
 type FieldRow = {
@@ -31,6 +32,16 @@ const FIELD_ROWS: FieldRow[] = [
   { label: "Nationality" },
   { label: "Birth date" },
   { label: "Expiry date" },
+  { label: "Gender", type: "dropdown", options: GENDER_OPTIONS },
+];
+
+const NATIONAL_ID_FIELD_ROWS: FieldRow[] = [
+  { label: "First name" },
+  { label: "Middle name", optional: true },
+  { label: "Last name" },
+  { label: "Email" },
+  { label: "Address" },
+  { label: "Birth date" },
   { label: "Gender", type: "dropdown", options: GENDER_OPTIONS },
 ];
 
@@ -57,7 +68,8 @@ function fieldError(label: string, value: string): string | null {
   return null;
 }
 
-export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrzValid, mrzMessage, busy }: OCRStepProps) {
+export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrzValid, mrzMessage, busy, docType }: OCRStepProps) {
+  const activeFieldRows = docType === "national_id" ? NATIONAL_ID_FIELD_ROWS : FIELD_ROWS;
   const [touched, setTouched] = useState<Record<string, boolean>>(() => {
     const raw = String(fields.Gender ?? "").trim();
     const normalized = normalizeGender(raw);
@@ -83,7 +95,7 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
     return submitted || !!touched[mapFieldKey(label)];
   }
 
-  const hasErrors = FIELD_ROWS.some((r) => fieldError(r.label, getValue(r.label)) !== null);
+  const hasErrors = activeFieldRows.some((r) => fieldError(r.label, getValue(r.label)) !== null);
 
   function handleRunFaceMatch() {
     setSubmitted(true);
@@ -105,7 +117,7 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
 
       {/* Fields grid */}
       <div className="grid gap-3 sm:grid-cols-2">
-        {FIELD_ROWS.map(({ label, optional, type, options }) => {
+        {activeFieldRows.map(({ label, optional, type, options }) => {
           const key = mapFieldKey(label) as keyof ExtractedFields;
           const value = getValue(label);
           const error = fieldError(label, value);
@@ -152,7 +164,7 @@ export default function OCRStep({ fields, setFields, runFaceMatch, prevStep, mrz
       {/* MRZ status (compact) */}
       <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/40 px-4 py-3">
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-slate-400">MRZ:</span>
+          <span className="text-slate-400">{docType === "national_id" ? "OCR:" : "MRZ:"}</span>
           <span className={`font-medium ${mrzColor}`}>{mrzLabel}</span>
           {mrzMessage && <span className="text-xs text-slate-500 hidden sm:inline">— {mrzMessage}</span>}
         </div>

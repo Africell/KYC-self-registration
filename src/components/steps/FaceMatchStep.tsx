@@ -65,7 +65,7 @@ async function buildDebugCrops(
 export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, prevStep, onSubmit, onReset }: Props) {
   const [debugCrops, setDebugCrops] = useState<{ selfie: string; doc: string; selfieBox: string; docBox: string } | null>(null);
   const [debugLoading, setDebugLoading] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
+  // const [showDebug, setShowDebug] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);

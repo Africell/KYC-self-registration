@@ -167,3 +167,27 @@ export async function apiValidateMRZFromOCR(
 
   return response.data;
 }
+
+export async function apiValidateDRCNationalIDFromOCR(
+  dataUrl: string,
+  token: string,
+): Promise<any> {
+  const file = dataUrlToFile(dataUrl);
+
+  const form = new FormData();
+  form.append("file", file);
+
+  const response = await kycApi.post(
+    `/HTTP_ValidateDRCNationalIDFromOCR/`,
+    form,
+    {
+      headers: {
+        "Content-Type": undefined,
+        Authorization: `Bearer ${token}`,
+        SourceApp: "",
+      },
+    },
+  );
+
+  return response.data;
+}

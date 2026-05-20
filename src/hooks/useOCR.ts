@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { apiValidateMRZFromOCR } from "../lib/api/kyc.api";
+import { apiValidateMRZFromOCR, apiValidateDRCNationalIDFromOCR } from "../lib/api/kyc.api";
 import { getStoredToken } from "../lib/services/msisdn.service";
 import { initialFields } from "../lib/constants/kyc.constants";
 import type { ExtractedFields } from "../types/kyc";
@@ -11,6 +11,7 @@ import { formatDate } from "../lib/utils";
 
 interface UseOCRProps {
   documentImage: string;
+  docType: string;
   pushError: (scope: string, message: string) => void;
   clearError: () => void;
   nextStep: () => void;
@@ -65,6 +66,68 @@ interface OCRApiResponse {
   score: number;
   tiers_attempted: number;
   processing_time_ms: number;
+}
+
+// ── DRC National ID API response shape ───────────────────────────────────────
+
+interface DRCFieldDetail {
+  confidence: number;
+  engine_used: string;
+  valid: boolean;
+  validation_note: string;
+  value: string;
+}
+
+interface DRCNationalIDApiResponse {
+  success: boolean;
+  card_detection_confidence: number;
+  card_detection_method: string;
+  document_type: string;
+  overall_confidence: number;
+  needs_review: boolean;
+  review_reasons: string[];
+  processing_time_ms: number;
+  rotation_angle: number;
+  nom: string;
+  prenom: string;
+  postnom: string;
+  date_naissance: string;
+  lieu_naissance: string;
+  sexe: string;
+  fields: {
+    nom?: DRCFieldDetail;
+    prenom?: DRCFieldDetail;
+    postnom?: DRCFieldDetail;
+    date_naissance?: DRCFieldDetail;
+    lieu_naissance?: DRCFieldDetail;
+    sexe?: DRCFieldDetail;
+  };
+}
+
+/** Map DRC National ID API response → ExtractedFields. */
+function mapDRCNationalIDFields(res: DRCNationalIDApiResponse): ExtractedFields {
+  // date_naissance is DD/MM/YYYY — convert to DD-MM-YYYY
+  const birthDate = (res.date_naissance ?? "").replace(/\//g, "-");
+
+  const gender = (res.sexe ?? "").toUpperCase();
+  const normalizedGender = gender === "M" ? "Male" : gender === "F" ? "Female" : res.sexe ?? "";
+
+  return {
+    FirstName: res.prenom ?? "",
+    MiddleName: res.postnom ?? "",
+    LastName: res.nom ?? "",
+    Email: "",
+    Address: res.lieu_naissance ?? "",
+    IdDocSerialNumber: String(Date.now()),
+    Nationality: "",
+    BirthDate: birthDate,
+    ExpiryDate: "",
+    Gender: normalizedGender,
+    rawMRZ: "",
+    rawOCRText: Object.entries(res.fields ?? {})
+      .map(([k, v]) => `${k}: ${(v as DRCFieldDetail)?.value ?? ""}`)
+      .join("\n"),
+  };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -132,6 +195,7 @@ function buildMrzMessage(res: OCRApiResponse): string {
 
 export function useOCR({
   documentImage,
+  docType,
   pushError,
   clearError,
   nextStep,
@@ -163,8 +227,41 @@ export function useOCR({
         return;
       }
 
-      // ── Step 2: build multipart form and POST via MRZ API ─────────────────
       setOcrProgress(40);
+
+      // ── DRC National ID path ───────────────────────────────────────────────
+      if (docType === "national_id") {
+        const response = await apiValidateDRCNationalIDFromOCR(documentImage, token);
+        setOcrProgress(80);
+
+        if (response.StatusCode !== 200 || !response.Data) {
+          throw new Error(
+            response.StatusDescription || `OCR API returned status ${response.StatusCode}`,
+          );
+        }
+
+        const res = response.Data as DRCNationalIDApiResponse;
+
+        if (!res.success) {
+          setMrzValid(false);
+          setMrzMessage("Could not read the national ID. Ensure it is flat, well-lit, and all corners are visible.");
+          nextStep();
+          return;
+        }
+
+        setFields(mapDRCNationalIDFields(res));
+        setMrzValid(res.overall_confidence >= 0.7);
+        setMrzMessage(
+          res.needs_review
+            ? `ID scanned with review flags: ${res.review_reasons.join(", ")}.`
+            : "National ID scanned successfully.",
+        );
+        setOcrProgress(100);
+        nextStep();
+        return;
+      }
+
+      // ── MRZ path (passport / driver's license) ────────────────────────────
       const response = await apiValidateMRZFromOCR(documentImage, token);
       setOcrProgress(80);
 
@@ -220,7 +317,7 @@ export function useOCR({
     } finally {
       setBusy(false);
     }
-  }, [documentImage, clearError, pushError, nextStep]);
+  }, [documentImage, docType, clearError, pushError, nextStep]);
 
   // ── Rehydrate ─────────────────────────────────────────────────────────────
   const rehydrateOCR = useCallback(

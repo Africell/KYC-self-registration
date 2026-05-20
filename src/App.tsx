@@ -178,7 +178,7 @@ export default function App(): JSX.Element {
     runOCRAndMRZ,
     rehydrateOCR,
     resetOCR,
-  } = useOCR({ documentImage, pushError, clearError, nextStep });
+  } = useOCR({ documentImage, docType, pushError, clearError, nextStep });
 
   // ── Face match ────────────────────────────────────────────────────────────
   const {
@@ -452,6 +452,7 @@ export default function App(): JSX.Element {
                 mrzValid={mrzValid}
                 mrzMessage={mrzMessage}
                 busy={matchBusy}
+                docType={docType}
               />
             )}
 

@@ -35,6 +35,7 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
 
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [croppedImage, setCroppedImage] = useState("");
+  const [imgDisplaySize, setImgDisplaySize] = useState({ w: 0, h: 0 });
 
   const imageWrapperRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -47,6 +48,7 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
       setRotation(0);
       setCroppedImage("");
       setCompletedCrop(undefined);
+      setImgDisplaySize({ w: 0, h: 0 });
     }
   }, [imageSrc]);
 
@@ -59,8 +61,14 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
       setRotation(0);
       setCroppedImage("");
       setCompletedCrop(undefined);
+      setImgDisplaySize({ w: 0, h: 0 });
     });
     reader.readAsDataURL(file);
+  }
+
+  function handleImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const img = e.currentTarget;
+    setImgDisplaySize({ w: img.offsetWidth, h: img.offsetHeight });
   }
 
   function getAngleFromCenter(clientX: number, clientY: number): number {
@@ -90,6 +98,14 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
       console.error(error);
     }
   }
+
+  const rotationPadding = imgDisplaySize.w
+    ? Math.ceil(
+        (Math.sqrt(imgDisplaySize.w ** 2 + imgDisplaySize.h ** 2) -
+          Math.max(imgDisplaySize.w, imgDisplaySize.h)) /
+          2,
+      )
+    : 0;
 
   const rotateHandle = (
     <div
@@ -137,13 +153,15 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
       {!!imgSrc && (
         <>
           <div
-            className="overflow-auto rounded-xl border border-slate-700 bg-slate-800 p-4"
+            className="overflow-auto max-h-[70vh] rounded-xl border border-slate-700 bg-slate-800 p-4"
             onMouseMove={handleMouseMove}
             onMouseUp={() => setIsRotating(false)}
             onMouseLeave={() => setIsRotating(false)}
           >
-            {/* Hide the built-in north resize handle; our rotateHandle takes its place */}
-            <style>{`.ReactCrop__drag-handle.ord-n { display: none !important; }`}</style>
+            <style>{`
+              .ReactCrop__drag-handle.ord-n { display: none !important; }
+              .ReactCrop { overflow: visible !important; }
+            `}</style>
 
             <ReactCrop
               crop={crop}
@@ -154,12 +172,14 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
               <div
                 ref={imageWrapperRef}
                 className="flex items-center justify-center"
+                style={{ padding: rotationPadding }}
               >
                 <img
                   ref={imgRef}
                   src={imgSrc}
                   alt="Upload"
                   draggable={false}
+                  onLoad={handleImageLoad}
                   style={{
                     transform: `rotate(${rotation}deg)`,
                     transformOrigin: "center",
@@ -220,3 +240,5 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
     </div>
   );
 }
+
+//idNumber and NN

@@ -5,7 +5,7 @@ import type { Step, ExtractedFields, KYCSession } from "../../types/kyc";
 export const steps: Step[] = [
   { key: "msisdn", label: "step_msisdn" },
   { key: "consent", label: "step_consent" },
-  { key: "selfie", label: "step_selfie" },
+  // { key: "selfie", label: "step_selfie" },
   { key: "document", label: "step_document" },
   { key: "ocr", label: "step_ocr" },
   { key: "signature", label: "step_signature" },

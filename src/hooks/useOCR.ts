@@ -92,15 +92,19 @@ interface DRCNationalIDApiResponse {
   prenom: string;
   postnom: string;
   date_naissance: string;
-  lieu_naissance: string;
+  adresse: string;
   sexe: string;
+  id_number?: string;
+  nn_number?: string;
   fields: {
     nom?: DRCFieldDetail;
     prenom?: DRCFieldDetail;
     postnom?: DRCFieldDetail;
     date_naissance?: DRCFieldDetail;
-    lieu_naissance?: DRCFieldDetail;
+    adresse?: DRCFieldDetail;
     sexe?: DRCFieldDetail;
+    id_number?: string;
+  nn_number?: string;
   };
 }
 
@@ -111,14 +115,13 @@ function mapDRCNationalIDFields(res: DRCNationalIDApiResponse): ExtractedFields 
 
   const gender = (res.sexe ?? "").toUpperCase();
   const normalizedGender = gender === "M" ? "Male" : gender === "F" ? "Female" : res.sexe ?? "";
-
   return {
     FirstName: res.prenom ?? "",
     MiddleName: res.postnom ?? "",
     LastName: res.nom ?? "",
     Email: "",
-    Address: res.lieu_naissance ?? "",
-    IdDocSerialNumber: String(Date.now()),
+    Address: res.adresse ?? "",
+    IdDocSerialNumber: [res.id_number, res.nn_number].filter(Boolean).join(" / "),
     Nationality: "",
     BirthDate: birthDate,
     ExpiryDate: "",

@@ -105,10 +105,10 @@ export default function SignatureStep({
   const handleNext = () => {
     setSubmitted(true);
     if (!signatureImage) {
-      console.log("No signature image found");
+    
       if (tab === "draw" && hasDrawn && sigCanvasRef.current) {
         const dataUrl = trimmedDataUrl(sigCanvasRef.current.getCanvas());
-        console.log("dataUrl?", dataUrl)
+       
         setSignatureImage(dataUrl);
         nextStep();
         return;

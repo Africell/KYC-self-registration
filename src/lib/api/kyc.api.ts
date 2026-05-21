@@ -102,7 +102,7 @@ export async function apiGenerateOTP(
       headers: { "X-Captcha-Token": captchaToken },
     },
   );
-  console.log("captchaToken", captchaToken)
+  // console.log("captchaToken", captchaToken)
   return data;
 }
 
@@ -137,7 +137,7 @@ export async function apiSubmitSIMRegistration(
       },
     },
   );
-  console.log("checking data returens on register", data)
+  // console.log("checking data returens on register", data)
   return data;
 }
 

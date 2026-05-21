@@ -130,7 +130,7 @@ const en = {
     "Choose your document type, then capture or upload clear photos.",
   doc_type_label: "Document type",
   doc_passport: "Passport",
-  doc_national_id: "National ID",
+  doc_national_id: "Voter ID",
   doc_drivers: "Driver's License",
   doc_hint_passport:
     "Open to the photo/data page. Ensure the MRZ (two lines at the bottom) is fully visible.",
@@ -230,6 +230,14 @@ const en = {
   sig_tip_3: "Avoid shadows, glare, and wrinkles on the paper",
   sig_tip_4: "Photograph straight-on (not at an angle)",
   sig_error_required: "Signature photo is required before continuing.",
+  sig_tab_upload: "Upload photo",
+  sig_tab_draw: "Draw signature",
+  sig_draw_title: "Draw your signature",
+  sig_draw_note: "Use your mouse or finger to sign in the box below",
+  sig_draw_clear: "Clear",
+  sig_draw_confirm: "Use this signature",
+  sig_draw_empty: "Please draw your signature before confirming.",
+  sig_trim_continue: "Trim & Continue",
 
   // ── Face match ────────────────────────────────────────────────────────────────
   match_title: "Face match result",
@@ -409,7 +417,7 @@ const fr: typeof en = {
     "Choisissez votre type de document, puis capturez ou téléchargez des photos claires.",
   doc_type_label: "Type de document",
   doc_passport: "Passeport",
-  doc_national_id: "Carte d'identité nationale",
+  doc_national_id: "Carte d’Électeur",
   doc_drivers: "Permis de conduire",
   doc_hint_passport:
     "Ouvrez à la page photo/données. Assurez-vous que la MRZ (deux lignes en bas) est entièrement visible.",
@@ -513,6 +521,14 @@ const fr: typeof en = {
   sig_tip_4: "Photographiez de face (pas en biais)",
   sig_error_required:
     "La photo de signature est obligatoire pour continuer.",
+  sig_tab_upload: "Télécharger une photo",
+  sig_tab_draw: "Dessiner la signature",
+  sig_draw_title: "Dessinez votre signature",
+  sig_draw_note: "Utilisez votre souris ou votre doigt pour signer dans le cadre ci-dessous",
+  sig_draw_clear: "Effacer",
+  sig_draw_confirm: "Utiliser cette signature",
+  sig_draw_empty: "Veuillez dessiner votre signature avant de confirmer.",
+  sig_trim_continue: "Recadrer et continuer",
 
   // ── Face match ────────────────────────────────────────────────────────────────
   match_title: "Résultat de correspondance faciale",

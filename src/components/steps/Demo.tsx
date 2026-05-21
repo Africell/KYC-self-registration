@@ -34,19 +34,22 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
   });
 
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
-  const [croppedImage, setCroppedImage] = useState("");
   const [imgDisplaySize, setImgDisplaySize] = useState({ w: 0, h: 0 });
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanMode, setIsPanMode] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
 
   const imageWrapperRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const startAngleRef = useRef(0);
   const startRotationRef = useRef(0);
+  const panStartRef = useRef({ mouseX: 0, mouseY: 0, offsetX: 0, offsetY: 0 });
 
   useEffect(() => {
     if (imageSrc) {
       setImgSrc(imageSrc);
       setRotation(0);
-      setCroppedImage("");
+      setPanOffset({ x: 0, y: 0 });
       setCompletedCrop(undefined);
       setImgDisplaySize({ w: 0, h: 0 });
     }
@@ -59,7 +62,7 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
     reader.addEventListener("load", () => {
       setImgSrc(reader.result?.toString() || "");
       setRotation(0);
-      setCroppedImage("");
+      setPanOffset({ x: 0, y: 0 });
       setCompletedCrop(undefined);
       setImgDisplaySize({ w: 0, h: 0 });
     });
@@ -84,18 +87,15 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
   }
 
   function handleMouseMove(event: React.MouseEvent<HTMLDivElement>) {
-    if (!isRotating) return;
-    const delta = getAngleFromCenter(event.clientX, event.clientY) - startAngleRef.current;
-    setRotation(startRotationRef.current + delta);
-  }
-
-  async function handleCropImage() {
-    if (!imgRef.current || !completedCrop) return;
-    try {
-      const cropped = await getCroppedImg(imgRef.current, completedCrop, rotation);
-      setCroppedImage(cropped);
-    } catch (error) {
-      console.error(error);
+    if (isRotating) {
+      const delta = getAngleFromCenter(event.clientX, event.clientY) - startAngleRef.current;
+      setRotation(startRotationRef.current + delta);
+    }
+    if (isPanning) {
+      setPanOffset({
+        x: panStartRef.current.offsetX + (event.clientX - panStartRef.current.mouseX),
+        y: panStartRef.current.offsetY + (event.clientY - panStartRef.current.mouseY),
+      });
     }
   }
 
@@ -122,7 +122,7 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
         setIsRotating(true);
       }}
       title="Drag to rotate"
-      className={`absolute -top-4 left-1/2 -translate-x-1/2 z-50 flex h-8 w-8 select-none items-center justify-center rounded-full border-2 border-white bg-blue-600 text-white shadow-lg transition-transform hover:bg-blue-700 ${isRotating ? "cursor-grabbing scale-110" : "cursor-grab"}`}
+      className={`absolute -top-4 left-1/2 -translate-x-1/2 z-150 flex h-8 w-8 select-none items-center justify-center rounded-full border-2 border-white bg-blue-600 text-white shadow-lg transition-transform hover:bg-blue-700 ${isRotating ? "cursor-grabbing scale-110" : "cursor-grab"}`}
     >
       <svg
         width="16"
@@ -153,11 +153,21 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
       {!!imgSrc && (
         <>
           <div
-            className="overflow-auto max-h-[70vh] rounded-xl border border-slate-700 bg-slate-800 p-4"
+            className="relative overflow-hidden max-h-[70vh] rounded-xl border border-slate-700 bg-slate-800 p-4"
             onMouseMove={handleMouseMove}
-            onMouseUp={() => setIsRotating(false)}
-            onMouseLeave={() => setIsRotating(false)}
+            onMouseUp={() => { setIsRotating(false); setIsPanning(false); }}
+            onMouseLeave={() => { setIsRotating(false); setIsPanning(false); }}
           >
+            {isPanMode && (
+              <div
+                className={`absolute inset-0 z-200 select-none ${isPanning ? "cursor-grabbing" : "cursor-grab"}`}
+                onMouseDown={(e) => {
+                  panStartRef.current = { mouseX: e.clientX, mouseY: e.clientY, offsetX: panOffset.x, offsetY: panOffset.y };
+                  setIsPanning(true);
+                }}
+              />
+            )}
+
             <style>{`
               .ReactCrop__drag-handle.ord-n { display: none !important; }
               .ReactCrop { overflow: visible !important; }
@@ -172,7 +182,10 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
               <div
                 ref={imageWrapperRef}
                 className="flex items-center justify-center"
-                style={{ padding: rotationPadding }}
+                style={{
+                  padding: rotationPadding,
+                  transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+                }}
               >
                 <img
                   ref={imgRef}
@@ -193,10 +206,10 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
 
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={handleCropImage}
-              className="rounded-xl bg-slate-700 px-5 py-2 text-sm font-medium text-slate-100 hover:bg-slate-600 border border-slate-600"
+              onClick={() => setIsPanMode((v) => !v)}
+              className={`rounded-xl px-5 py-2 text-sm font-medium border ${isPanMode ? "bg-blue-600 border-blue-500 text-white" : "border-slate-700 text-slate-300 hover:bg-slate-800"}`}
             >
-              Crop Image
+              {isPanMode ? "Crop Mode" : "Move Image"}
             </button>
 
             <button
@@ -208,7 +221,24 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
 
             {onConfirm && (
               <button
-                onClick={() => onConfirm(croppedImage || imgSrc)}
+                onClick={async () => {
+                  if (imgRef.current && completedCrop) {
+                    try {
+                      const adjustedCrop = {
+                        ...completedCrop,
+                        x: completedCrop.x - panOffset.x,
+                        y: completedCrop.y - panOffset.y,
+                      };
+                      const cropped = await getCroppedImg(imgRef.current, adjustedCrop, rotation);
+                      onConfirm(cropped);
+                    } catch (error) {
+                      console.error(error);
+                      onConfirm(imgSrc);
+                    }
+                  } else {
+                    onConfirm(imgSrc);
+                  }
+                }}
                 className="rounded-xl bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 hover:bg-cyan-400"
               >
                 Confirm
@@ -227,16 +257,7 @@ export default function UploadExample({ imageSrc, onConfirm, onCancel }: Props =
         </>
       )}
 
-      {!!croppedImage && !onConfirm && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Cropped Result</h2>
-          <img
-            src={croppedImage}
-            alt="Cropped"
-            className="max-h-125 rounded-xl border"
-          />
-        </div>
-      )}
+
     </div>
   );
 }

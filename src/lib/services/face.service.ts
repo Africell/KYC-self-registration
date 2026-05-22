@@ -1,8 +1,4 @@
 import * as faceapi from "face-api.js";
-import { similarityFromDistance } from "../utils";
-import type { FaceMatchResult } from "../../types/kyc";
-
-const FACE_MATCH_THRESHOLD = 0.52;
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -260,16 +256,51 @@ export async function getBestFaceDescriptor(
   throw new Error("No face detected in video frame.");
 }
 
-// ─── Match ─────────────────────────────────────────────────────────────────────
+// ─── Selfie crop for API ────────────────────────────────────────────────────────
 
-export function getFaceMatchVerdict(distance: number): FaceMatchResult {
-  const similarity = similarityFromDistance(distance, FACE_MATCH_THRESHOLD);
-  const passed = distance < FACE_MATCH_THRESHOLD;
-  return {
-    distance: Number(distance.toFixed(4)),
-    similarity,
-    threshold: FACE_MATCH_THRESHOLD,
-    passed,
-    status: passed ? "pass" : "review",
-  };
+/**
+ * Detects the face in a selfie and returns a padded crop as a JPEG data URL.
+ * If no face is detected the full image is returned with cropped = false so
+ * the caller can send it as a fallback and set selfie_pre_cropped accordingly.
+ */
+export async function cropFaceToDataUrl(
+  img: HTMLImageElement,
+): Promise<{ dataUrl: string; cropped: boolean }> {
+  let box: faceapi.Box | null = null;
+
+  if (isSsdLoaded()) {
+    const det = await faceapi
+      .detectSingleFace(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.15 }))
+      .withFaceLandmarks();
+    box = det?.detection.box ?? null;
+  }
+
+  if (!box) {
+    const det = await faceapi
+      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.2 }))
+      .withFaceLandmarks();
+    box = det?.detection.box ?? null;
+  }
+
+  if (!box) {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext("2d")!.drawImage(img, 0, 0);
+    return { dataUrl: canvas.toDataURL("image/jpeg", 0.92), cropped: false };
+  }
+
+  const pad = Math.max(50, Math.max(box.width, box.height) * 0.4);
+  const x = Math.max(0, box.x - pad);
+  const y = Math.max(0, box.y - pad);
+  const w = Math.min(img.naturalWidth - x, box.width + pad * 2);
+  const h = Math.min(img.naturalHeight - y, box.height + pad * 2);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(w);
+  canvas.height = Math.round(h);
+  canvas.getContext("2d")!.drawImage(img, x, y, w, h, 0, 0, canvas.width, canvas.height);
+
+  return { dataUrl: canvas.toDataURL("image/jpeg", 0.92), cropped: true };
 }
+

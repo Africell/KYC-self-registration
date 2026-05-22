@@ -1,8 +1,7 @@
-// src/hooks/useFaceMatch.ts
-
 import { useCallback, useState } from "react";
-import * as faceapi from "face-api.js";
-import { getBestFaceDescriptor, getFaceMatchVerdict } from "../lib/services/face.service";
+import { apiFaceMatch } from "../lib/api/kyc.api";
+import { getStoredToken } from "../lib/services/msisdn.service";
+import { cropFaceToDataUrl } from "../lib/services/face.service";
 import { dataUrlToImage } from "../utils/image";
 import type { FaceMatchResult } from "../types/kyc";
 import type { KYCSession } from "../lib/services/session.service";
@@ -39,28 +38,33 @@ export function useFaceMatch({
       return;
     }
 
+    const token = getStoredToken();
+    if (!token) {
+      pushError("face-match", "Session expired. Please re-verify your number.");
+      return;
+    }
+
     try {
       clearError();
       setBusy(true);
 
-      const [selfie, documentImg] = await Promise.all([
-        dataUrlToImage(selfieImage),
-        dataUrlToImage(documentImage),
-      ]);
+      const selfieImg = await dataUrlToImage(selfieImage);
+      const { dataUrl: croppedSelfie, cropped: selfieCropped } = await cropFaceToDataUrl(selfieImg);
 
-      const [selfieDetection, docDetection] = await Promise.all([
-        getBestFaceDescriptor(selfie),
-        getBestFaceDescriptor(documentImg),
-      ]);
+      const api = await apiFaceMatch(documentImage, croppedSelfie, selfieCropped, token);
 
-      const matcher = new faceapi.FaceMatcher([
-        new faceapi.LabeledFaceDescriptors("selfie", [selfieDetection.descriptor]),
-      ]);
+      const result: FaceMatchResult = {
+        result: api.result,
+        similarity: api.similarity,
+        confidence_level: api.confidence_level,
+        threshold: api.threshold,
+        doc_mp_aligned: api.doc_mp_aligned,
+        photo_mp_aligned: api.photo_mp_aligned,
+        passed: api.result === "match",
+        status: api.result === "match" ? "pass" : "review",
+      };
 
-      const result  = matcher.findBestMatch(docDetection.descriptor);
-      const verdict = getFaceMatchVerdict(result.distance);
-
-      setFaceMatch(verdict);
+      setFaceMatch(result);
       nextStep();
     } catch (err) {
       pushError(
@@ -74,7 +78,6 @@ export function useFaceMatch({
     }
   }, [selfieImage, documentImage, pushError, clearError, nextStep]);
 
-  // ── rehydrate ─────────────────────────────────────────────────────────────
   const rehydrateFaceMatch = useCallback(
     (s: Pick<KYCSession, "faceMatch">) => {
       if (s.faceMatch) setFaceMatch(s.faceMatch);

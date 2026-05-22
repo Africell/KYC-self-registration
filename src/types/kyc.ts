@@ -54,9 +54,12 @@ export type LandmarkStatus = {
 };
 
 export type FaceMatchResult = {
-  distance: number;
+  result: "match" | "no_match";
   similarity: number;
+  confidence_level: "high" | "medium" | "low";
   threshold: number;
+  doc_mp_aligned: boolean;
+  photo_mp_aligned: boolean;
   passed: boolean;
   status: "pass" | "review";
 };

@@ -255,3 +255,52 @@ export async function apiValidateDRCNationalIDFromOCR(
 
   return response.data;
 }
+
+// ── Face Match ────────────────────────────────────────────────────────────────
+
+export interface FaceMatchApiResponse {
+  result: "match" | "no_match";
+  similarity: number;
+  confidence_level: "high" | "medium" | "low";
+  threshold: number;
+  doc_mp_aligned: boolean;
+  photo_mp_aligned: boolean;
+  doc_face_b64: string;
+  cam_face_b64: string;
+  doc_detection: { bbox: number[]; confidence: number };
+  cam_detection: { bbox: number[]; confidence: number };
+  timing: {
+    doc_yolo_ms: number;
+    cam_yolo_ms: number;
+    doc_embedding_ms: number;
+    cam_embedding_ms: number;
+    total_ms: number;
+  };
+}
+
+export async function apiFaceMatch(
+  documentDataUrl: string,
+  selfieDataUrl: string,
+  selfieCropped: boolean,
+  token: string,
+): Promise<FaceMatchApiResponse> {
+  const form = new FormData();
+  form.append("document", dataUrlToFile(documentDataUrl, "document.jpg"));
+  form.append("selfie", dataUrlToFile(selfieDataUrl, "selfie.jpg"));
+  form.append("selfie_pre_cropped", String(selfieCropped));
+console.log("String(selfieCropped)",String(selfieCropped))
+  const { data } = await kycApi.post(
+    "/HTTP_FaceMatching/",
+    form,
+    {
+      headers: {
+        "Content-Type": undefined,
+        Authorization: `Bearer ${token}`,
+        Login: ENV.API_LOGIN,
+        SourceApp: "FCDM_App",
+      },
+    },
+  );
+  console.log("data for fac match", data?.Data)
+  return data.Data;
+}

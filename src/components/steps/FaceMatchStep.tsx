@@ -170,16 +170,26 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
               </span>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-3 gap-2 text-center mb-3">
             {[
-              { labelKey: "match_similarity", value: `${faceMatch.similarity}%` },
-              { labelKey: "match_distance",   value: String(faceMatch.distance) },
-              { labelKey: "match_threshold",  value: String(faceMatch.threshold) },
+              { labelKey: "match_similarity",  value: `${(faceMatch.similarity * 100).toFixed(1)}%` },
+              { labelKey: "match_confidence",  value: faceMatch.confidence_level },
+              { labelKey: "match_threshold",   value: String(faceMatch.threshold) },
             ].map(({ labelKey, value }) => (
               <div key={labelKey} className="rounded-xl bg-slate-900/60 px-3 py-3">
                 <p className="text-xs text-slate-500 mb-1">{t(labelKey)}</p>
-                <p className="text-lg font-bold text-cyan-300 tabular-nums">{value}</p>
+                <p className="text-lg font-bold text-cyan-300 tabular-nums capitalize">{value}</p>
               </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {[
+              { labelKey: "match_doc_aligned",   ok: faceMatch.doc_mp_aligned },
+              { labelKey: "match_photo_aligned", ok: faceMatch.photo_mp_aligned },
+            ].map(({ labelKey, ok }) => (
+              <span key={labelKey} className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${ok ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
+                {ok ? "✓" : "✗"} {t(labelKey)}
+              </span>
             ))}
           </div>
         </div>

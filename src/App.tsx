@@ -17,6 +17,7 @@ import { buildPayload } from "./lib/services/payload.service";
 import {
   loadSession,
   saveSession,
+  clearSession,
   startExpiryWatcher,
 } from "./lib/services/session.service";
 import {
@@ -36,7 +37,7 @@ import ReviewStep from "./components/steps/ReviewStep";
 import { LanguageSwitcher } from "./components/layout/LanguageSwitcher";
 
 import { apiSubmitSIMRegistration } from "./lib/api/kyc.api";
-import { getStoredToken } from "./lib/services/msisdn.service";
+import { getStoredToken, clearOTP } from "./lib/services/msisdn.service";
 import { transformToBackendPayload } from "./utils/image";
 import type { SessionPatch } from "./lib/services/session.service";
 import DocumentStep from "./components/steps/document/DocumentStep";
@@ -306,6 +307,8 @@ export default function App(): JSX.Element {
     if (response.StatusCode !== 200 || response.Status !== "successful") {
       throw new Error(response.StatusDescription || "Submission failed. Please try again.");
     }
+    clearSession();
+    clearOTP();
   };
 
   // ── Reset ─────────────────────────────────────────────────────────────────

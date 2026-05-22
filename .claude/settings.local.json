@@ -10,7 +10,8 @@
       "Bash(npm install *)",
       "Bash(node -e ' *)",
       "Bash(findstr /S \"national_id\\\\|IdDocType\\\\|document.type\\\\|docType\" *.tsx *.ts)",
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\layla.abosaad\\\\OneDrive - Africell\\\\Desktop\\\\proj\\\\proj\\\\src\" -Filter \"*.json\" -Recurse)"
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\layla.abosaad\\\\OneDrive - Africell\\\\Desktop\\\\proj\\\\proj\\\\src\" -Filter \"*.json\" -Recurse)",
+      "Bash(xargs grep -l \"selfie.constants\\\\|GUIDE_CX\\\\|GUIDE_CY\")"
     ]
   }
 }

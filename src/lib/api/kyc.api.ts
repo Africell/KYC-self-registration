@@ -68,6 +68,46 @@ export interface SIMRegistrationResponse {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+async function compressBase64Image(
+  base64: string,
+  quality = 0.7,
+  maxWidth = 1280,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const isDataUrl = base64.startsWith("data:");
+    const dataUrl = isDataUrl ? base64 : `data:image/jpeg;base64,${base64}`;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let { width, height } = img;
+
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas 2D context unavailable"));
+
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL("image/jpeg", quality);
+      resolve(isDataUrl ? compressed : compressed.split(",")[1]);
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+// function b64SizeKB(base64: string): string {
+//   // strip data-URL prefix if present before calculating raw byte size
+//   const raw = base64.includes(",") ? base64.split(",")[1] : base64;
+//   return ((raw.length * 0.75) / 1024).toFixed(1) + " KB";
+// }
+
 function dataUrlToFile(
   dataUrl: string,
   filename = "document.jpg",
@@ -123,13 +163,37 @@ export async function apiValidateOTP(
 
 // ── SIM Registration ──────────────────────────────────────────────────────────
 
+const IMAGE_FIELDS = [
+  "FaceFrontPhoto_b64",
+  "FaceSidePhoto_b64",
+  "IdDocFontPhoto_b64",
+  "IdDocRearPhoto_b64",
+  "SignaturePhotoAttId64",
+] as const satisfies (keyof SIMRegistrationPayload)[];
+
 export async function apiSubmitSIMRegistration(
   payload: SIMRegistrationPayload,
   token: string,
 ): Promise<SIMRegistrationResponse> {
+  const compressedPayload = { ...payload };
+
+  for (const field of IMAGE_FIELDS) {
+    const original = payload[field];
+    if (original) {
+      const compressed = await compressBase64Image(original);
+      // console.log(`[Image Compression] ${field}:`, {
+      //   before: b64SizeKB(original),
+      //   after: b64SizeKB(compressed),
+      //   reduction: `${((1 - compressed.replace(/^data:[^,]+,/, "").length / original.replace(/^data:[^,]+,/, "").length) * 100).toFixed(1)}%`,
+      // });
+      compressedPayload[field] = compressed;
+    }
+  }
+
+  console.log("payload", compressedPayload);
   const { data } = await kycApi.post<SIMRegistrationResponse>(
     `/HTTP_FCDM_SIMRegistration_Add/`,
-    payload,
+    compressedPayload,
     {
       headers: {
         Authorization: `Bearer ${token}`,

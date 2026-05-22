@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { apiValidateMRZFromOCR, apiValidateDRCNationalIDFromOCR } from "../lib/api/kyc.api";
+import { apiValidateMRZFromOCR, apiValidateDRCNationalIDFromOCR, apiValidateDRCDrivingLicenceFromOCR } from "../lib/api/kyc.api";
 import { getStoredToken } from "../lib/services/msisdn.service";
 import { initialFields } from "../lib/constants/kyc.constants";
 import type { ExtractedFields } from "../types/kyc";
@@ -105,6 +105,58 @@ interface DRCNationalIDApiResponse {
     sexe?: DRCFieldDetail;
     id_number?: string;
   nn_number?: string;
+  };
+}
+
+// ── DRC Driving Licence API response shape ────────────────────────────────────
+
+interface DRCDrivingLicenceApiResponse {
+  success: boolean;
+  document_type: string;
+  needs_review: boolean;
+  overall_confidence: number;
+  review_reasons: string[];
+  family_name: string;
+  given_names: string;
+  date_of_birth: string;
+  place_of_birth: string;
+  date_of_issue: string;
+  date_of_expiry: string;
+  card_number: string;
+  licence_number: string;
+  mrz_text: string;
+  mrz_licence_number: string;
+  mrz_card_number: string;
+  fields: Record<string, unknown>;
+  card_detection_method: string;
+  card_detection_confidence: number;
+  rotation_angle: number;
+  processing_time_ms: number;
+}
+
+/** Map DRC Driving Licence API response → ExtractedFields. */
+function mapDRCDrivingLicenceFields(res: DRCDrivingLicenceApiResponse): ExtractedFields {
+  const nameParts = (res.given_names ?? "").trim().split(/\s+/);
+  const firstName = nameParts[0] ?? "";
+  const middleName = nameParts.slice(1).join(" ");
+
+  // date_of_birth may be DD/MM/YYYY — normalise to DD-MM-YYYY
+  const birthDate = (res.date_of_birth ?? "").replace(/\//g, "-");
+  const expiryDate = (res.date_of_expiry ?? "").replace(/\//g, "-");
+
+  return {
+    FirstName: firstName,
+    MiddleName: middleName,
+    LastName: res.family_name ?? "",
+    Email: "",
+    Address: res.place_of_birth ?? "",
+    IdDocSerialNumber: res.licence_number || res.card_number || "",
+    Nationality: "",
+    BirthDate: birthDate,
+    ExpiryDate: expiryDate,
+    Gender: "",
+    rawMRZ: res.mrz_text ?? "",
+    rawOCRText: `licence_number: ${res.licence_number}\ncard_number: ${res.card_number}\ndate_of_birth: ${res.date_of_birth}\ndate_of_expiry: ${res.date_of_expiry}`,
   };
 }
 
@@ -264,7 +316,39 @@ export function useOCR({
         return;
       }
 
-      // ── MRZ path (passport / driver's license) ────────────────────────────
+      // ── DRC Driving Licence path ──────────────────────────────────────────
+      if (docType === "drivers_license") {
+        const response = await apiValidateDRCDrivingLicenceFromOCR(documentImage, token);
+        setOcrProgress(80);
+
+        if (response.StatusCode !== 200 || !response.Data) {
+          throw new Error(
+            response.StatusDescription || `OCR API returned status ${response.StatusCode}`,
+          );
+        }
+
+        const res = response.Data as DRCDrivingLicenceApiResponse;
+
+        if (!res.success) {
+          setMrzValid(false);
+          setMrzMessage("Could not read the driving licence. Ensure it is flat, well-lit, and all corners are visible.");
+          nextStep();
+          return;
+        }
+
+        setFields(mapDRCDrivingLicenceFields(res));
+        setMrzValid(res.overall_confidence >= 0.5);
+        setMrzMessage(
+          res.needs_review
+            ? `Driving licence scanned with review flags: ${res.review_reasons.join(", ")}.`
+            : "Driving licence scanned successfully.",
+        );
+        setOcrProgress(100);
+        nextStep();
+        return;
+      }
+
+      // ── MRZ path (passport) ───────────────────────────────────────────────
       const response = await apiValidateMRZFromOCR(documentImage, token);
       setOcrProgress(80);
 

@@ -256,6 +256,30 @@ export async function apiValidateDRCNationalIDFromOCR(
   return response.data;
 }
 
+export async function apiValidateDRCDrivingLicenceFromOCR(
+  dataUrl: string,
+  token: string,
+): Promise<any> {
+  const file = dataUrlToFile(dataUrl);
+
+  const form = new FormData();
+  form.append("file", file);
+
+  const response = await kycApi.post(
+    `/HTTP_ValidateDRCDrivingLicenceFromOCR/`,
+    form,
+    {
+      headers: {
+        "Content-Type": undefined,
+        Authorization: `Bearer ${token}`,
+        SourceApp: "",
+      },
+    },
+  );
+
+  return response.data;
+}
+
 // ── Face Match ────────────────────────────────────────────────────────────────
 
 export interface FaceMatchApiResponse {

@@ -127,6 +127,7 @@ interface DRCDrivingLicenceApiResponse {
   mrz_text: string;
   mrz_licence_number: string;
   mrz_card_number: string;
+  nationality: string;
   fields: Record<string, unknown>;
   card_detection_method: string;
   card_detection_confidence: number;
@@ -151,7 +152,7 @@ function mapDRCDrivingLicenceFields(res: DRCDrivingLicenceApiResponse): Extracte
     Email: "",
     Address: res.place_of_birth ?? "",
     IdDocSerialNumber: res.licence_number || res.card_number || "",
-    Nationality: "",
+    Nationality: res.nationality ?? "",
     BirthDate: birthDate,
     ExpiryDate: expiryDate,
     Gender: "",
@@ -174,7 +175,7 @@ function mapDRCNationalIDFields(res: DRCNationalIDApiResponse): ExtractedFields 
     Email: "",
     Address: res.adresse ?? "",
     IdDocSerialNumber: [res.id_number, res.nn_number].filter(Boolean).join(" / "),
-    Nationality: "",
+    Nationality: "COD",
     BirthDate: birthDate,
     ExpiryDate: "",
     Gender: normalizedGender,

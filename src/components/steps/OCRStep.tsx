@@ -18,6 +18,7 @@ type FieldRow = {
   label: string;
   labelKey: string;
   optional?: boolean;
+  disabled?: boolean;
   type?: "text" | "dropdown";
   options?: string[];
 };
@@ -47,6 +48,7 @@ const NATIONAL_ID_FIELD_ROWS: FieldRow[] = [
   { label: "Middle name", labelKey: "ocr_field_middle", optional: true },
   { label: "Last name", labelKey: "ocr_field_last" },
   { label: "ID number", labelKey: "ocr_field_doc_number" },
+  { label: "Nationality", labelKey: "ocr_field_nationality", disabled: true },
   { label: "Email", labelKey: "ocr_field_email", optional: true },
   { label: "Address", labelKey: "ocr_field_address", optional: true },
   { label: "Birth date", labelKey: "ocr_field_birth" },
@@ -170,9 +172,9 @@ export default function OCRStep({
 
       {/* Fields grid */}
       <div className="grid gap-3 sm:grid-cols-2">
-        {activeFieldRows.map(({ label, labelKey, optional, type, options }) => {
+        {activeFieldRows.map(({ label, labelKey, optional, disabled, type, options }) => {
           const key = mapFieldKey(label) as keyof ExtractedFields;
-          const isDisabled = ocrFilledKeys.has(key);
+          const isDisabled = disabled || ocrFilledKeys.has(key);
           const value = getValue(label);
           const errKey = fieldErrorKey(label, value, activeFieldRows);
           const showErr = !!errKey && showError(label);

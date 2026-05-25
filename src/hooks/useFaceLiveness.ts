@@ -1,6 +1,7 @@
 // src/hooks/useFaceLiveness.ts
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import * as faceapi from "face-api.js";
 import Webcam from "react-webcam";
 
@@ -56,7 +57,7 @@ const INITIAL_LANDMARK_STATUS: LandmarkStatus = {
   faceDetected: false,
   yawEstimate:  0,
   qualityOk:    false,
-  hint:         "Center your face inside the frame.",
+  hint:         "",
   faceBox:      null,
 };
 
@@ -166,6 +167,7 @@ export function useFaceLiveness({
   active,
   challengeCount = 3,
 }: UseFaceLivenessProps) {
+  const { t } = useTranslation();
   const intervalRef           = useRef<number | null>(null);
   const challengeTimerRef     = useRef<number | null>(null);
   const pitchWindow           = useRef<number[]>([]);
@@ -260,11 +262,12 @@ export function useFaceLiveness({
       setChallengeTimeLeft(CHALLENGE_TIMEOUT_MS / 1000);
 
       // Force-reset landmark status and sync the change-guard ref
-      prevLandmarkRef.current = INITIAL_LANDMARK_STATUS;
-      setLandmarkStatus(INITIAL_LANDMARK_STATUS);
+      const resetStatus = { ...INITIAL_LANDMARK_STATUS, hint: t("hint_center_face") };
+      prevLandmarkRef.current = resetStatus;
+      setLandmarkStatus(resetStatus);
       setPhase("detecting");
     },
-    [clearChallengeTimer, setPhase],
+    [clearChallengeTimer, setPhase, t],
   );
 
   // ── Per-challenge countdown ────────────────────────────────────────────────
@@ -381,13 +384,13 @@ export function useFaceLiveness({
         faceDetected: true,
         yawEstimate:  roundYaw(computeYawFromLandmarks(det.landmarks)),
         qualityOk:    computeFaceQuality(det),
-        hint:         "Turn your head to the right for the side photo.",
+        hint:         t("hint_side_photo"),
         faceBox:      { x: rawBox.x, y: rawBox.y, width: rawBox.width, height: rawBox.height },
       });
     } catch {
       // Non-critical tracking — silent failure is intentional
     }
-  }, [modelsLoaded, webcamRef, updateLandmarkStatus]);
+  }, [modelsLoaded, webcamRef, updateLandmarkStatus, t]);
 
   // ── Main analysis loop ─────────────────────────────────────────────────────
   const analyzeLiveFace = useCallback(async (): Promise<void> => {
@@ -410,7 +413,7 @@ export function useFaceLiveness({
             ...prevLandmarkRef.current,
             faceDetected: false,
             faceBox:      null,
-            hint:         "Only one person should be in frame.",
+            hint:         t("hint_one_person"),
           });
           if (currentPhase === "ready") setPhase("detecting");
           return;
@@ -424,10 +427,10 @@ export function useFaceLiveness({
           : null;
 
         const hint = !rawBox
-          ? "Center your face inside the frame."
+          ? t("hint_center_face")
           : !inOval
-            ? "Move your face into the oval guide."
-            : "Face detected! Click 'I'm Ready' to begin.";
+            ? t("hint_move_into_oval")
+            : t("hint_face_detected_ready");
 
         updateLandmarkStatus({ ...prevLandmarkRef.current, faceDetected, faceBox, hint });
 
@@ -451,7 +454,7 @@ export function useFaceLiveness({
     if (POSE_CHALLENGES.has(currentChallenge) && !areGestureModelsLoaded()) {
       updateLandmarkStatus({
         ...prevLandmarkRef.current,
-        hint: "Almost ready… preparing gesture detection.",
+        hint: t("hint_gesture_loading"),
       });
       return;
     }
@@ -468,7 +471,7 @@ export function useFaceLiveness({
           faceDetected: false,
           yawEstimate:  0,
           qualityOk:    false,
-          hint:         "No face detected. Move closer or improve lighting.",
+          hint:         t("hint_no_face"),
           faceBox:      null,
         });
         return;
@@ -479,7 +482,7 @@ export function useFaceLiveness({
           faceDetected: false,
           yawEstimate:  0,
           qualityOk:    false,
-          hint:         "Only one person should be in frame.",
+          hint:         t("hint_one_person"),
           faceBox:      null,
         });
         return;
@@ -500,12 +503,12 @@ export function useFaceLiveness({
           framePass = Math.abs(yaw) < 0.10 && qualityOk;
           if (framePass) {
             hint = passStreakRef.current > 0
-              ? `✓ Hold still… (${passStreakRef.current + 1}/${PASS_STREAK_REQUIRED})`
-              : "Face centered — hold still";
+              ? t("hint_center_holding", { current: passStreakRef.current + 1, required: PASS_STREAK_REQUIRED })
+              : t("hint_center_hold");
           } else {
             hint = Math.abs(yaw) >= 0.10
-              ? "Face the camera directly"
-              : "Hold still — checking quality…";
+              ? t("hint_look_camera")
+              : t("hint_checking_quality");
           }
           break;
 
@@ -515,10 +518,10 @@ export function useFaceLiveness({
           // turning, but yaw measurement remains reliable.
           framePass = yaw > TURN_YAW_TARGET;
           hint = framePass
-            ? (passStreakRef.current > 0 ? "✓ Hold that position!" : "✓ Good turn — hold it!")
+            ? (passStreakRef.current > 0 ? t("hint_hold_position") : t("hint_good_turn"))
             : pct > 45
-              ? `Almost there — keep turning left (${pct}%)`
-              : "Turn your head to the left";
+              ? t("hint_turn_left_progress", { pct })
+              : t("hint_turn_left");
           break;
         }
 
@@ -526,10 +529,10 @@ export function useFaceLiveness({
           const pct = Math.min(100, Math.round(Math.max(0, -yaw) / TURN_YAW_TARGET * 100));
           framePass = yaw < -TURN_YAW_TARGET;
           hint = framePass
-            ? (passStreakRef.current > 0 ? "✓ Hold that position!" : "✓ Good turn — hold it!")
+            ? (passStreakRef.current > 0 ? t("hint_hold_position") : t("hint_good_turn"))
             : pct > 45
-              ? `Almost there — keep turning right (${pct}%)`
-              : "Turn your head to the right";
+              ? t("hint_turn_right_progress", { pct })
+              : t("hint_turn_right");
           break;
         }
 
@@ -542,24 +545,24 @@ export function useFaceLiveness({
           const progressPct = Math.min(100, Math.round(movedBy / CLOSER_DELTA * 100));
           framePass = movedBy >= CLOSER_DELTA && ratio >= CLOSER_MIN_RATIO;
           hint = framePass
-            ? "✓ Close enough — hold still!"
+            ? t("hint_closer_hold")
             : progressPct > 40
-              ? `Almost there — ${progressPct}% closer, keep going`
-              : "Move your face closer to the camera";
+              ? t("hint_closer_progress", { pct: progressPct })
+              : t("hint_closer");
           break;
         }
 
         case "raiseLeftHand":
           if (gestureFrame && isRaisingLeftHand(gestureFrame.pose)) {
             framePass = true;
-            hint = "✓ Left hand raised!";
+            hint = t("hint_left_hand_raised");
           }
           break;
 
         case "raiseRightHand":
           if (gestureFrame && isRaisingRightHand(gestureFrame.pose)) {
             framePass = true;
-            hint = "✓ Right hand raised!";
+            hint = t("hint_right_hand_raised");
           }
           break;
 
@@ -568,7 +571,7 @@ export function useFaceLiveness({
             const pitch = computePitchFromPose(gestureFrame.pose);
             if (pitch !== null && detectNodFromWindow(pitchWindow.current, pitch)) {
               framePass = true;
-              hint = "✓ Head nod detected!";
+              hint = t("hint_nod_detected");
             }
           }
           break;
@@ -588,7 +591,7 @@ export function useFaceLiveness({
     } catch (err) {
       console.error("[useFaceLiveness] challenge detection error:", err);
     }
-  }, [modelsLoaded, webcamRef, updateLandmarkStatus, setPhase]);
+  }, [modelsLoaded, webcamRef, updateLandmarkStatus, setPhase, t]);
 
   // ── Detection interval ────────────────────────────────────────────────────
   useEffect(() => {

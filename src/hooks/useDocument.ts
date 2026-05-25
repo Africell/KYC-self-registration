@@ -10,6 +10,7 @@ import Webcam from "react-webcam";
 
 import { analyzeDocumentQuality } from "../lib/quality";
 import { detectPossibleSpoof }    from "../lib/services/spoof.service";
+import { compressBase64Image, COMPRESS_DOCUMENT, COMPRESS_PNG_ONLY } from "../lib/api/kyc.api";
 import {
   fileToDataUrl,
   dataUrlToImage,
@@ -97,7 +98,8 @@ export function useDocument({
         }
 
         const quality = await analyzeDocumentQuality(dataUrl);
-        setImage(side, dataUrl);
+        const compressed = await compressBase64Image(dataUrl, COMPRESS_DOCUMENT);
+        setImage(side, compressed);
         setQuality(side, quality);
       } catch (err) {
         pushError(
@@ -120,13 +122,24 @@ export function useDocument({
         clearError();
 
         const dataUrl = await fileToDataUrl(file);
-        const quality = await analyzeDocumentQuality(dataUrl);
+        const docQuality = await analyzeDocumentQuality(dataUrl);
 
-        setImage(side, dataUrl);
-        setQuality(side, quality);
+        const isPng   = file.type === "image/png";
+        const isLarge = file.size > 5 * 1024 * 1024;
 
-        if (!quality.looksUsefulForOCR) {
-          pushError(qualityScope, quality.reasons[0] ?? "Image quality may affect OCR accuracy.");
+        let finalUrl = dataUrl;
+        if (isPng || isLarge) {
+          finalUrl = await compressBase64Image(
+            dataUrl,
+            isPng && !isLarge ? COMPRESS_PNG_ONLY : COMPRESS_DOCUMENT,
+          );
+        }
+
+        setImage(side, finalUrl);
+        setQuality(side, docQuality);
+
+        if (!docQuality.looksUsefulForOCR) {
+          pushError(qualityScope, docQuality.reasons[0] ?? "Image quality may affect OCR accuracy.");
         }
       } catch (err) {
         pushError(

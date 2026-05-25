@@ -1,4 +1,4 @@
-
+import { useTranslation } from "react-i18next";
 import { GUIDE_CX, GUIDE_CY, GUIDE_RX, GUIDE_RY } from "../selfie.constants";
 
 interface SideGuideOverlayProps {
@@ -10,6 +10,7 @@ const ARC_R    = 18;
 const ARC_CIRC = 2 * Math.PI * ARC_R;
 
 export function SideGuideOverlay({ yawProgress, isReady }: SideGuideOverlayProps) {
+  const { t } = useTranslation();
   const arcFill = yawProgress * ARC_CIRC;
   const color   = isReady ? "#34d399" : "#22d3ee";
 
@@ -60,7 +61,7 @@ export function SideGuideOverlay({ yawProgress, isReady }: SideGuideOverlayProps
       <text x={GUIDE_CX} y={GUIDE_CY + GUIDE_RY + 6} textAnchor="middle"
         fontSize="3.2" fill={color} fontFamily="system-ui, sans-serif"
         fontWeight="500" opacity="0.9" style={{ transition: "fill 0.4s" }}>
-        {isReady ? "Good! Now capture →" : "Turn your head right"}
+        {isReady ? t("selfie_side_good_capture") : t("selfie_side_turn_right")}
       </text>
     </svg>
   );

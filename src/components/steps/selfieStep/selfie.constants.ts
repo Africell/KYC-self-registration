@@ -32,9 +32,9 @@ export const PROGRESS_STEPS: Array<{
   label: string;
   icon: LucideIcon;
 }> = [
-  { key: "liveness", label: "Liveness",    icon: ShieldCheck },
-  { key: "front",    label: "Front Photo", icon: Camera      },
-  { key: "side",     label: "Side Photo",  icon: RotateCcw   },
+  { key: "liveness", label: "selfie_step_liveness", icon: ShieldCheck },
+  { key: "front",    label: "selfie_step_front",    icon: Camera      },
+  { key: "side",     label: "selfie_step_side",     icon: RotateCcw   },
 ];
 
 // Maps CaptureStatus phase → which 0-based progress step is active.

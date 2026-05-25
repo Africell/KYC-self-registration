@@ -257,7 +257,7 @@ export default function SelfieStep({
                 </div>
                 <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-white truncate">
                   <ChallengeIcon size={18} className="shrink-0" />
-                  {currentConfig.label}
+                  {t(currentConfig.label)}
                 </div>
                 {(livenessChallenge === "lookLeft" || livenessChallenge === "lookRight") && (
                   <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
@@ -378,7 +378,7 @@ export default function SelfieStep({
                             ? "text-cyan-200 font-medium"
                             : "text-slate-500"
                       }>
-                        {isFuture ? t("selfie_locked") : cfg.label}
+                        {isFuture ? t("locked") : t(cfg.label)}
                       </span>
                       <span className="ml-auto flex items-center">
                         {done ? (

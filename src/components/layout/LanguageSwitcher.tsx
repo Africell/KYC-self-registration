@@ -13,10 +13,10 @@ const languages = [
 
 // export function LanguageSwitcher({ timers }: Props) {
 export function LanguageSwitcher() {
-  const [lang, setLang] = useState(i18n.language || "en");
+  const [lang, setLang] = useState(i18n.language || "fr");
 
   useEffect(() => {
-    const current = i18n.language || "en";
+    const current = i18n.language || "fr";
     setLang(current);
   }, []);
 

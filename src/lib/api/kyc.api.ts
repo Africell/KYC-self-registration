@@ -68,37 +68,52 @@ export interface SIMRegistrationResponse {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function compressBase64Image(
+export interface CompressOptions {
+  quality?: number; // JPEG quality 0–1
+  maxWidth?: number; // cap pixel width, preserving aspect ratio
+}
+
+// Captures and large uploads: resize to 1600 px and encode at high quality.
+export const COMPRESS_DOCUMENT: CompressOptions = {
+  quality: 0.92,
+  maxWidth: 1600,
+};
+// PNG-only uploads: just convert the format; no resize needed.
+export const COMPRESS_PNG_ONLY: CompressOptions = { quality: 0.95 };
+
+export async function compressBase64Image(
   base64: string,
-  quality = 0.7,
-  maxWidth = 1280,
+  { quality = 0.92, maxWidth = Infinity }: CompressOptions = {},
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const isDataUrl = base64.startsWith("data:");
-    const dataUrl = isDataUrl ? base64 : `data:image/jpeg;base64,${base64}`;
+    const src = isDataUrl ? base64 : `data:image/jpeg;base64,${base64}`;
 
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
       let { width, height } = img;
-
       if (width > maxWidth) {
         height = Math.round((height * maxWidth) / width);
         width = maxWidth;
       }
 
+      const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
 
       const ctx = canvas.getContext("2d");
       if (!ctx) return reject(new Error("Canvas 2D context unavailable"));
 
+      // Fill white so PNG transparency doesn't become black in JPEG output.
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
       ctx.drawImage(img, 0, 0, width, height);
-      const compressed = canvas.toDataURL("image/jpeg", quality);
-      resolve(isDataUrl ? compressed : compressed.split(",")[1]);
+
+      const out = canvas.toDataURL("image/jpeg", quality);
+      resolve(isDataUrl ? out : out.split(",")[1]);
     };
     img.onerror = reject;
-    img.src = dataUrl;
+    img.src = src;
   });
 }
 
@@ -108,14 +123,10 @@ async function compressBase64Image(
 //   return ((raw.length * 0.75) / 1024).toFixed(1) + " KB";
 // }
 
-function dataUrlToFile(
-  dataUrl: string,
-  filename = "document.jpg",
-): File {
+function dataUrlToFile(dataUrl: string, filename = "document.jpg"): File {
   const [header, base64] = dataUrl.split(",");
 
-  const mime =
-    header.match(/:(.*?);/)?.[1] ?? "image/jpeg";
+  const mime = header.match(/:(.*?);/)?.[1] ?? "image/jpeg";
 
   const binary = atob(base64);
 
@@ -163,37 +174,14 @@ export async function apiValidateOTP(
 
 // ── SIM Registration ──────────────────────────────────────────────────────────
 
-const IMAGE_FIELDS = [
-  "FaceFrontPhoto_b64",
-  "FaceSidePhoto_b64",
-  "IdDocFontPhoto_b64",
-  "IdDocRearPhoto_b64",
-  "SignaturePhotoAttId64",
-] as const satisfies (keyof SIMRegistrationPayload)[];
-
 export async function apiSubmitSIMRegistration(
   payload: SIMRegistrationPayload,
   token: string,
 ): Promise<SIMRegistrationResponse> {
-  const compressedPayload = { ...payload };
-
-  for (const field of IMAGE_FIELDS) {
-    const original = payload[field];
-    if (original) {
-      const compressed = await compressBase64Image(original);
-      // console.log(`[Image Compression] ${field}:`, {
-      //   before: b64SizeKB(original),
-      //   after: b64SizeKB(compressed),
-      //   reduction: `${((1 - compressed.replace(/^data:[^,]+,/, "").length / original.replace(/^data:[^,]+,/, "").length) * 100).toFixed(1)}%`,
-      // });
-      compressedPayload[field] = compressed;
-    }
-  }
-
-  console.log("payload", compressedPayload);
+  console.log("payload", payload);
   const { data } = await kycApi.post<SIMRegistrationResponse>(
     `/HTTP_FCDM_SIMRegistration_Add/`,
-    compressedPayload,
+    payload,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -216,18 +204,14 @@ export async function apiValidateMRZFromOCR(
   const form = new FormData();
   form.append("file", file);
 
-  const response = await kycApi.post(
-    `/HTTP_ValidateMRZFromOCR/`,
-    form,
-    {
-      // baseURL: ENV.MRZ_API_BASE_URL,
-      headers: {
-        "Content-Type": undefined,
-        Authorization: `Bearer ${token}`,
-        SourceApp: "",
-      },
+  const response = await kycApi.post(`/HTTP_ValidateMRZFromOCR/`, form, {
+    // baseURL: ENV.MRZ_API_BASE_URL,
+    headers: {
+      "Content-Type": undefined,
+      Authorization: `Bearer ${token}`,
+      SourceApp: "",
     },
-  );
+  });
 
   return response.data;
 }
@@ -312,19 +296,15 @@ export async function apiFaceMatch(
   form.append("document", dataUrlToFile(documentDataUrl, "document.jpg"));
   form.append("selfie", dataUrlToFile(selfieDataUrl, "selfie.jpg"));
   form.append("selfie_pre_cropped", String(selfieCropped));
-console.log("String(selfieCropped)",String(selfieCropped))
-  const { data } = await kycApi.post(
-    "/HTTP_FaceMatching/",
-    form,
-    {
-      headers: {
-        "Content-Type": undefined,
-        Authorization: `Bearer ${token}`,
-        Login: ENV.API_LOGIN,
-        SourceApp: "FCDM_App",
-      },
+  console.log("String(selfieCropped)", String(selfieCropped));
+  const { data } = await kycApi.post("/HTTP_FaceMatching/", form, {
+    headers: {
+      "Content-Type": undefined,
+      Authorization: `Bearer ${token}`,
+      Login: ENV.API_LOGIN,
+      SourceApp: "FCDM_App",
     },
-  );
-  console.log("data for fac match", data?.Data)
+  });
+  console.log("data for fac match", data?.Data);
   return data.Data;
 }

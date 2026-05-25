@@ -98,7 +98,7 @@ export default function DocumentStep({
   const selectedDoc = DOC_TYPES.find((d) => d.id === docType);
   const docTypeSelected = !!docType;
   const needsBack = selectedDoc && selectedDoc.sides === 2;
-  const canProceed = docTypeSelected && !!documentImage && (!needsBack || !!documentBackImage);
+  const canProceed = docTypeSelected && !!documentImage;
 
   return (
     <section className="space-y-6">
@@ -247,7 +247,7 @@ export default function DocumentStep({
                 onCapture={() => void captureDocumentBack()}
                 onUpload={(e) => void handleDocumentBackUpload(e)}
                 onDropFile={(file) => void handleDocumentBackDropFile(file)}
-                isLoading={documentBackUploading}
+                 isLoading={documentBackUploading}
                 onDownload={() => void saveDocumentBackBlobLocally()}
               />
             </div>
@@ -297,8 +297,7 @@ export default function DocumentStep({
           disabled={!canProceed || busy}
           title={
             !docTypeSelected ? t("doc_type_label") :
-            !documentImage ? t("doc_hint_front") :
-            needsBack && !documentBackImage ? t("doc_hint_back") : undefined
+            !documentImage ? t("doc_hint_front") : undefined
           }
           className="flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -317,14 +316,8 @@ export default function DocumentStep({
           )}
         </button>
 
-        {!canProceed && docTypeSelected && (
-          <p className="text-xs text-slate-500">
-            {!documentImage
-              ? t("doc_hint_front")
-              : needsBack && !documentBackImage
-              ? t("doc_hint_back")
-              : ""}
-          </p>
+        {!canProceed && docTypeSelected && !documentImage && (
+          <p className="text-xs text-slate-500">{t("doc_hint_front")}</p>
         )}
       </div>
     </section>

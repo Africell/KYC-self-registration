@@ -1,4 +1,4 @@
-import i18n from "i18next";
+﻿import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
@@ -469,7 +469,7 @@ const fr: typeof en = {
     "Choisissez votre type de document, puis capturez ou téléchargez des photos claires.",
   doc_type_label: "Type de document",
   doc_passport: "Passeport",
-  doc_national_id: "Carte d’Électeur",
+  doc_national_id: "Carte d'Électeur",
   doc_drivers: "Permis de conduire",
   doc_hint_passport:
     "Ouvrez à la page photo/données. Assurez-vous que la MRZ (deux lignes en bas) est entièrement visible.",
@@ -681,6 +681,7 @@ i18n
   .init({
     fallbackLng: "en",
     debug: false,
+    interpolation: { escapeValue: false },
     resources: {
       en: { translation: en },
       fr: { translation: fr },

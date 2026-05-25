@@ -50,14 +50,14 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
     requiresHand: false,
     requiresPose: true,
   },
-  nodHead: {
-    id: "nodHead",
-    label: "challenge_nodHead_label",
-    instruction: "challenge_nodHead_instruction",
-    icon: ArrowUpDown,
-    requiresHand: false,
-    requiresPose: true,
-  },
+  // nodHead: {
+  //   id: "nodHead",
+  //   label: "challenge_nodHead_label",
+  //   instruction: "challenge_nodHead_instruction",
+  //   icon: ArrowUpDown,
+  //   requiresHand: false,
+  //   requiresPose: true,
+  // },
   moveCloser: {
     id: "moveCloser",
     label: "challenge_moveCloser_label",
@@ -81,7 +81,7 @@ export function buildChallengeSequence(
   count = 3,
   previousSequence?: LivenessChallenge[],
 ): LivenessChallenge[] {
-  const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "moveCloser", "raiseLeftHand", "raiseRightHand", "nodHead"];
+  const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "moveCloser", "raiseLeftHand", "raiseRightHand"];
   const needed = Math.max(1, count - 1);
 
   let picked: LivenessChallenge[];

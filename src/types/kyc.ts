@@ -24,7 +24,7 @@ export type LivenessChallenge =
   | "lookRight"
   | "raiseLeftHand"
   | "raiseRightHand"
-  | "nodHead"
+  // | "nodHead"
   | "moveCloser";
 
 import type { LucideIcon } from "lucide-react";

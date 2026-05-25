@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Webcam from "react-webcam";
 import { QualityPanel } from "./QualityPanel";
@@ -19,6 +20,8 @@ interface DocumentSideProps {
   quality:             DocumentQuality | null;
   onCapture:           () => void;
   onUpload:            (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onDropFile:          (file: File) => void;
+  isLoading:           boolean;
   onDownload:          () => void;
 }
 
@@ -32,9 +35,12 @@ export function DocumentSide({
   quality,
   onCapture,
   onUpload,
+  onDropFile,
+  isLoading,
   onDownload,
 }: DocumentSideProps) {
   const { t } = useTranslation();
+  const [isDragging, setIsDragging] = useState(false);
 
   const isFront      = side === "front";
   const heading      = t(isFront ? "side_front_heading" : "side_back_heading");
@@ -79,17 +85,39 @@ export function DocumentSide({
           </p>
         </div>
       ) : (
-        <label className="group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/40 px-6 py-10 text-center transition-colors hover:border-cyan-500/50 hover:bg-slate-900/60">
-          <svg className="h-10 w-10 text-slate-500 transition-colors group-hover:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-          </svg>
+        <label
+          className={`group flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
+            isLoading
+              ? "cursor-wait border-slate-600 bg-slate-900/40"
+              : isDragging
+              ? "cursor-copy border-cyan-400 bg-cyan-500/10"
+              : "cursor-pointer border-slate-700 bg-slate-900/40 hover:border-cyan-500/50 hover:bg-slate-900/60"
+          }`}
+          onDragOver={(e) => { e.preventDefault(); if (!isLoading) setIsDragging(true); }}
+          onDragEnter={(e) => { e.preventDefault(); if (!isLoading) setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragging(false);
+            if (isLoading) return;
+            const file = e.dataTransfer.files[0];
+            if (file?.type.startsWith("image/")) onDropFile(file);
+          }}
+        >
+          {isLoading ? (
+            <span className="h-10 w-10 rounded-full border-[3px] border-slate-600 border-t-cyan-400 animate-spin" />
+          ) : (
+            <svg className={`h-10 w-10 transition-colors ${isDragging ? "text-cyan-400" : "text-slate-500 group-hover:text-cyan-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+          )}
           <div>
-            <p className="text-sm font-medium text-slate-200 group-hover:text-cyan-300">
-              {t("side_upload_prompt", { side: heading, docType: docLabel })}
+            <p className={`text-sm font-medium transition-colors ${isLoading ? "text-slate-400" : isDragging ? "text-cyan-300" : "text-slate-200 group-hover:text-cyan-300"}`}>
+              {isLoading ? t("sig_loading") : isDragging ? t("side_drop_here") : t("side_upload_prompt", { side: heading, docType: docLabel })}
             </p>
-            <p className="mt-1 text-xs text-slate-500">{t("side_upload_note")}</p>
+            {!isLoading && <p className="mt-1 text-xs text-slate-500">{t("side_upload_note")}</p>}
           </div>
-          <input type="file" accept="image/*" className="hidden" onChange={onUpload} />
+          <input type="file" accept="image/*" className="hidden" onChange={onUpload} disabled={isLoading} />
         </label>
       )}
 

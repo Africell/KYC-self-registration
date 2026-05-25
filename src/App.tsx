@@ -163,6 +163,10 @@ export default function App(): JSX.Element {
     captureDocumentBack,
     handleDocumentUpload,
     handleDocumentBackUpload,
+    handleDocumentDropFile,
+    handleDocumentBackDropFile,
+    documentUploading,
+    documentBackUploading,
     saveDocumentBlobLocally,
     saveDocumentBackBlobLocally,
     rehydrateDocument,
@@ -434,6 +438,10 @@ export default function App(): JSX.Element {
                 captureDocumentBack={captureDocumentBack}
                 handleDocumentUpload={handleDocumentUpload}
                 handleDocumentBackUpload={handleDocumentBackUpload}
+                handleDocumentDropFile={handleDocumentDropFile}
+                handleDocumentBackDropFile={handleDocumentBackDropFile}
+                documentUploading={documentUploading}
+                documentBackUploading={documentBackUploading}
                 documentImage={documentImage}
                 documentBackImage={documentBackImage}
                 runOCRAndMRZ={runOCRAndMRZ}

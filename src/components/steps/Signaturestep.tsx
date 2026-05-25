@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import SignatureCanvas from "react-signature-canvas";
 
@@ -62,35 +63,48 @@ export default function SignatureStep({
   const [hasDrawn, setHasDrawn] = useState(false);
   const [error, setError]     = useState("");
   const [hint, setHint]       = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted]   = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading]   = useState(false);
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const processFile = async (file: File) => {
     setError("");
     setHint("");
-    const file = e.target.files?.[0];
-    if (!file) return;
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
       setError(t("sig_error_type"));
-      e.target.value = "";
       return;
     }
 
     if (file.size > MAX_FILE_MB * 1024 * 1024) {
       setError(t("sig_error_size", { max: MAX_FILE_MB }));
-      e.target.value = "";
       return;
     }
 
-    const dataUrl = await fileToDataUrl(file);
-    const img     = new Image();
-    img.onload = () => {
-      if (img.naturalWidth < 200 || img.naturalHeight < 80) {
-        setHint(t("sig_hint_small"));
-      }
-      setSignatureImage(dataUrl);
-    };
-    img.src        = dataUrl;
+    flushSync(() => setIsLoading(true));
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      await new Promise<void>((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          if (img.naturalWidth < 200 || img.naturalHeight < 80) {
+            setHint(t("sig_hint_small"));
+          }
+          setSignatureImage(dataUrl);
+          resolve();
+        };
+        img.onerror = () => resolve();
+        img.src = dataUrl;
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
     e.target.value = "";
   };
 
@@ -133,15 +147,36 @@ export default function SignatureStep({
 
         {signatureImage ? (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-emerald-600/40 bg-slate-900 p-4">
-              <p className="mb-3 text-xs uppercase tracking-wide text-emerald-400">
-                {t("sig_captured")}
+            <div
+              className={`rounded-2xl border p-4 transition-colors ${
+                isDragging
+                  ? "border-cyan-400 bg-cyan-500/10"
+                  : "border-emerald-600/40 bg-slate-900"
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const file = e.dataTransfer.files[0];
+                if (file) void processFile(file);
+              }}
+            >
+              <p className={`mb-3 text-xs uppercase tracking-wide transition-colors ${isDragging ? "text-cyan-400" : "text-emerald-400"}`}>
+                {isDragging ? t("side_drop_here") : t("sig_captured")}
               </p>
-              <img
-                src={signatureImage}
-                alt={t("sig_title")}
-                className="max-h-48 w-full rounded-xl object-contain bg-white p-2"
-              />
+              {isLoading ? (
+                <div className="flex max-h-48 items-center justify-center">
+                  <span className="h-10 w-10 rounded-full border-[3px] border-slate-600 border-t-cyan-400 animate-spin" />
+                </div>
+              ) : (
+                <img
+                  src={signatureImage}
+                  alt={t("sig_title")}
+                  className="max-h-48 w-full rounded-xl object-contain bg-white p-2"
+                />
+              )}
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -181,27 +216,47 @@ export default function SignatureStep({
 
             {/* Upload tab */}
             {tab === "upload" && (
-              <button
-                onClick={() => fileRef.current?.click()}
+              <div
+                onClick={() => { if (!isLoading) fileRef.current?.click(); }}
+                onDragOver={(e) => { e.preventDefault(); if (!isLoading) setIsDragging(true); }}
+                onDragEnter={(e) => { e.preventDefault(); if (!isLoading) setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (isLoading) return;
+                  const file = e.dataTransfer.files[0];
+                  if (file) void processFile(file);
+                }}
                 className={`flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-14 text-center transition-colors
-                  ${submitted && !signatureImage
-                    ? "border-rose-500 bg-rose-500/5 hover:border-rose-400"
-                    : "border-slate-700 hover:border-slate-500 hover:bg-slate-900"
+                  ${isLoading
+                    ? "cursor-wait border-slate-600 bg-slate-900/60"
+                    : isDragging
+                    ? "cursor-copy border-cyan-400 bg-cyan-500/10"
+                    : submitted && !signatureImage
+                    ? "cursor-pointer border-rose-500 bg-rose-500/5 hover:border-rose-400"
+                    : "cursor-pointer border-slate-700 hover:border-slate-500 hover:bg-slate-900"
                   }`}
               >
-                <svg className="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                </svg>
+                {isLoading ? (
+                  <span className="h-10 w-10 rounded-full border-[3px] border-slate-600 border-t-cyan-400 animate-spin" />
+                ) : (
+                  <svg className={`h-10 w-10 transition-colors ${isDragging ? "text-cyan-400" : "text-slate-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                )}
                 <div>
-                  <p className="text-base font-medium text-slate-200">
-                    {t("sig_upload_title")}
+                  <p className={`text-base font-medium transition-colors ${isLoading ? "text-slate-400" : isDragging ? "text-cyan-300" : "text-slate-200"}`}>
+                    {isLoading ? t("sig_loading") : isDragging ? t("side_drop_here") : t("sig_upload_title")}
                   </p>
-                  <p className="mt-1 text-sm text-slate-400">
-                    {t("sig_upload_note", { max: MAX_FILE_MB })}
-                  </p>
+                  {!isLoading && (
+                    <p className="mt-1 text-sm text-slate-400">
+                      {t("sig_upload_note", { max: MAX_FILE_MB })}
+                    </p>
+                  )}
                 </div>
-              </button>
+              </div>
             )}
 
             {/* Draw tab */}

@@ -58,6 +58,10 @@ interface DocumentStepProps {
   captureDocumentBack:         () => Promise<void>;
   handleDocumentUpload:        (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleDocumentBackUpload:    (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleDocumentDropFile:      (file: File) => Promise<void>;
+  handleDocumentBackDropFile:  (file: File) => Promise<void>;
+  documentUploading:           boolean;
+  documentBackUploading:       boolean;
   saveDocumentBlobLocally:     () => Promise<void>;
   saveDocumentBackBlobLocally: () => Promise<void>;
   runOCRAndMRZ:                () => Promise<void>;
@@ -80,6 +84,10 @@ export default function DocumentStep({
   captureDocumentBack,
   handleDocumentUpload,
   handleDocumentBackUpload,
+  handleDocumentDropFile,
+  handleDocumentBackDropFile,
+  documentUploading,
+  documentBackUploading,
   saveDocumentBlobLocally,
   saveDocumentBackBlobLocally,
   runOCRAndMRZ,
@@ -220,6 +228,8 @@ export default function DocumentStep({
             quality={documentQuality}
             onCapture={() => void captureDocument()}
             onUpload={(e) => void handleDocumentUpload(e)}
+            onDropFile={(file) => void handleDocumentDropFile(file)}
+            isLoading={documentUploading}
             onDownload={() => void saveDocumentBlobLocally()}
           />
 
@@ -236,6 +246,8 @@ export default function DocumentStep({
                 quality={documentBackQuality}
                 onCapture={() => void captureDocumentBack()}
                 onUpload={(e) => void handleDocumentBackUpload(e)}
+                onDropFile={(file) => void handleDocumentBackDropFile(file)}
+                isLoading={documentBackUploading}
                 onDownload={() => void saveDocumentBackBlobLocally()}
               />
             </div>

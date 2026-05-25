@@ -1,10 +1,6 @@
-// src/hooks/useDocument.ts
-//
-// Manages front and back document image capture, upload, quality analysis,
-// and local save. All front/back operations share the same internal helpers
-// — no duplicated logic.
 
 import { useCallback, useState } from "react";
+import { flushSync } from "react-dom";
 import type { RefObject } from "react";
 import Webcam from "react-webcam";
 
@@ -29,17 +25,21 @@ interface UseDocumentProps {
 }
 
 interface UseDocumentReturn {
-  documentImage:           string;
-  documentQuality:         DocumentQuality | null;
-  documentBackImage:       string;
-  documentBackQuality:     DocumentQuality | null;
-  documentPreviewMode:     "camera" | "upload";
-  setDocumentPreviewMode:  (mode: "camera" | "upload") => void;
-  captureDocument:         () => Promise<void>;
-  captureDocumentBack:     () => Promise<void>;
-  handleDocumentUpload:    (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
-  handleDocumentBackUpload:(e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
-  saveDocumentBlobLocally: () => Promise<void>;
+  documentImage:              string;
+  documentQuality:            DocumentQuality | null;
+  documentBackImage:          string;
+  documentBackQuality:        DocumentQuality | null;
+  documentPreviewMode:        "camera" | "upload";
+  setDocumentPreviewMode:     (mode: "camera" | "upload") => void;
+  captureDocument:            () => Promise<void>;
+  captureDocumentBack:        () => Promise<void>;
+  handleDocumentUpload:       (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleDocumentBackUpload:   (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleDocumentDropFile:     (file: File) => Promise<void>;
+  handleDocumentBackDropFile: (file: File) => Promise<void>;
+  documentUploading:          boolean;
+  documentBackUploading:      boolean;
+  saveDocumentBlobLocally:    () => Promise<void>;
   saveDocumentBackBlobLocally: () => Promise<void>;
   rehydrateDocument: (
     s: Pick<KYCSession, "documentImage" | "documentBackImage" | "documentQuality" | "documentBackQuality">
@@ -60,7 +60,9 @@ export function useDocument({
   const [documentQuality,     setDocumentQuality]     = useState<DocumentQuality | null>(null);
   const [documentBackImage,   setDocumentBackImage]   = useState("");
   const [documentBackQuality, setDocumentBackQuality] = useState<DocumentQuality | null>(null);
-  const [documentPreviewMode, setDocumentPreviewMode] = useState<"camera" | "upload">("upload");
+  const [documentPreviewMode,    setDocumentPreviewMode]    = useState<"camera" | "upload">("upload");
+  const [documentUploading,      setDocumentUploading]      = useState(false);
+  const [documentBackUploading,  setDocumentBackUploading]  = useState(false);
 
   // ── Setters by side ───────────────────────────────────────────────────────
   // Keyed helpers so the shared logic below doesn't need separate branches.
@@ -111,17 +113,21 @@ export function useDocument({
     [captureFromWebcam, pushError, clearError, setImage, setQuality],
   );
 
+  const setUploading = useCallback((side: DocumentSide, val: boolean) => {
+    if (side === "front") setDocumentUploading(val);
+    else                  setDocumentBackUploading(val);
+  }, []);
+
   // ── Shared: upload + analyse ──────────────────────────────────────────────
-  const handleUpload = useCallback(
-    async (side: DocumentSide, e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
-      const errorScope    = side === "front" ? "document" : "document-back";
-      const qualityScope  = side === "front" ? "document-quality" : "document-back-quality";
+  const processFile = useCallback(
+    async (side: DocumentSide, file: File): Promise<void> => {
+      const errorScope   = side === "front" ? "document" : "document-back";
+      const qualityScope = side === "front" ? "document-quality" : "document-back-quality";
+      flushSync(() => setUploading(side, true));
       try {
-        const file = e.target.files?.[0];
-        if (!file) return;
         clearError();
 
-        const dataUrl = await fileToDataUrl(file);
+        const dataUrl    = await fileToDataUrl(file);
         const docQuality = await analyzeDocumentQuality(dataUrl);
 
         const isPng   = file.type === "image/png";
@@ -146,9 +152,20 @@ export function useDocument({
           errorScope,
           err instanceof Error ? err.message : `Could not read uploaded ${side} document image.`,
         );
+      } finally {
+        setUploading(side, false);
       }
     },
-    [clearError, pushError, setImage, setQuality],
+    [clearError, pushError, setImage, setQuality, setUploading],
+  );
+
+  const handleUpload = useCallback(
+    async (side: DocumentSide, e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await processFile(side, file);
+    },
+    [processFile],
   );
 
   // ── Shared: save locally ──────────────────────────────────────────────────
@@ -179,6 +196,14 @@ export function useDocument({
   const handleDocumentBackUpload  = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => handleUpload("back", e),
     [handleUpload],
+  );
+  const handleDocumentDropFile     = useCallback(
+    (file: File) => processFile("front", file),
+    [processFile],
+  );
+  const handleDocumentBackDropFile = useCallback(
+    (file: File) => processFile("back", file),
+    [processFile],
   );
 
   const saveDocumentBlobLocally = useCallback(async () => {
@@ -230,6 +255,10 @@ export function useDocument({
     captureDocumentBack,
     handleDocumentUpload,
     handleDocumentBackUpload,
+    handleDocumentDropFile,
+    handleDocumentBackDropFile,
+    documentUploading,
+    documentBackUploading,
     saveDocumentBlobLocally,
     saveDocumentBackBlobLocally,
     rehydrateDocument,

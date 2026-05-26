@@ -17,6 +17,7 @@ export interface GenerateOTPResponse {
   StatusDescription: string;
   StatusDate: string;
   Data: {
+    MSISDN: string;
     OTP: string;
     OTPValidity: number;
   };

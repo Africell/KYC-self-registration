@@ -131,7 +131,7 @@ export async function generateOTP(
   const expiresAt = Date.now() + validitySeconds * 1000;
 
   setActiveSession({
-    msisdn: normalized,
+    msisdn: data.Data.MSISDN,
     expiresAt,
     attemptsLeft: OTP_MAX_ATTEMPTS,
   });
@@ -214,7 +214,7 @@ export async function verifyOTP(
     const expiresAt = serverTime + tokenData.TokenValidity * 1000;
 
     saveToken(tokenData.Token, expiresAt);
-    createSession({ msisdn: normalized }, expiresAt);
+    createSession({ msisdn: session.msisdn }, expiresAt);
     setActiveSession(null);
 
     return { ok: true, token: tokenData.Token, expiresAt };

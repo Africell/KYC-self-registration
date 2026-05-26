@@ -299,7 +299,7 @@ export default function App(): JSX.Element {
   );
 
   const backendPayload = useMemo(
-    () => transformToBackendPayload(internalPayload, msisdn, docType),
+    () => transformToBackendPayload(internalPayload, loadSession()?.msisdn ?? msisdn, docType),
     [internalPayload, msisdn, docType],
   );
 

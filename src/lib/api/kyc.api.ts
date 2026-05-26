@@ -276,6 +276,7 @@ export interface ValidateDocumentTypeResponse {
     document_detected: boolean;
     processing_time_ms: number;
     scores: Record<string, number>;
+    image_b64?: string;
   };
 }
 

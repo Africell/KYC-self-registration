@@ -51,6 +51,7 @@ interface DocumentStepProps {
   docWebcamRef:                React.RefObject<Webcam | null>;
   docVideoConstraints:         MediaTrackConstraints;
   documentImage:               string;
+  documentOriginalImage:       string;
   documentQuality:             DocumentQuality | null;
   documentBackImage:           string;
   documentBackQuality:         DocumentQuality | null;
@@ -77,6 +78,7 @@ export default function DocumentStep({
   docWebcamRef,
   docVideoConstraints,
   documentImage,
+  // documentOriginalImage,
   documentQuality,
   documentBackImage,
   documentBackQuality,
@@ -232,6 +234,28 @@ export default function DocumentStep({
             isLoading={documentUploading}
             onDownload={() => void saveDocumentBlobLocally()}
           />
+
+          {/* Debug: image comparison — shows original upload vs API-processed image
+          {documentOriginalImage && documentImage && (
+            <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-yellow-400">
+                Debug — Image comparison
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <p className="text-xs text-slate-400">Original upload</p>
+                  <img src={documentOriginalImage} alt="Original" className="w-full rounded-xl border border-slate-700 object-contain bg-slate-800" />
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs text-slate-400">API processed</p>
+                    <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">IN USE</span>
+                  </div>
+                  <img src={documentImage} alt="API processed" className="w-full rounded-xl border border-emerald-500/40 object-contain bg-slate-800" />
+                </div>
+              </div>
+            </div>
+          )} */}
 
           {/* Back side */}
           {documentImage && needsBack && (

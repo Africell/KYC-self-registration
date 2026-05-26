@@ -12,6 +12,7 @@ interface UseFaceMatchProps {
   pushError: (scope: string, message: string) => void;
   clearError: () => void;
   nextStep: () => void;
+  expireSession: (message: string) => void;
 }
 
 interface UseFaceMatchReturn {
@@ -28,6 +29,7 @@ export function useFaceMatch({
   pushError,
   clearError,
   nextStep,
+  expireSession,
 }: UseFaceMatchProps): UseFaceMatchReturn {
   const [faceMatch, setFaceMatch] = useState<FaceMatchResult | null>(null);
   const [busy, setBusy]           = useState(false);
@@ -40,7 +42,7 @@ export function useFaceMatch({
 
     const token = getStoredToken();
     if (!token) {
-      pushError("face-match", "Session expired. Please re-verify your number.");
+      expireSession("Session expired. Please restart the registration.");
       return;
     }
 

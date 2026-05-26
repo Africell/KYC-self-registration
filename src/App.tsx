@@ -86,6 +86,7 @@ export default function App(): JSX.Element {
     pushError,
     clearError,
     resetFlow,
+    expireSession,
   } = useKYCFlow();
 
   // ── Models ────────────────────────────────────────────────────────────────
@@ -154,6 +155,7 @@ export default function App(): JSX.Element {
   // ── Document ──────────────────────────────────────────────────────────────
   const {
     documentImage,
+    documentOriginalImage,
     documentQuality,
     documentBackImage,
     documentBackQuality,
@@ -183,7 +185,7 @@ export default function App(): JSX.Element {
     runOCRAndMRZ,
     rehydrateOCR,
     resetOCR,
-  } = useOCR({ documentImage, docType, pushError, clearError, nextStep });
+  } = useOCR({ documentImage, docType, pushError, clearError, nextStep, expireSession });
 
   // ── Face match ────────────────────────────────────────────────────────────
   const {
@@ -198,6 +200,7 @@ export default function App(): JSX.Element {
     pushError,
     clearError,
     nextStep,
+    expireSession,
   });
 
   // ── Rehydration ───────────────────────────────────────────────────────────
@@ -313,7 +316,10 @@ export default function App(): JSX.Element {
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     const token = getStoredToken();
-    if (!token) throw new Error("Session expired. Please re-verify your phone number.");
+    if (!token) {
+      expireSession("Session expired. Please restart the registration.");
+      return;
+    }
     const response = await apiSubmitSIMRegistration(backendPayload, token);
     if (response.StatusCode !== 200 || response.Status !== "successful") {
       throw new Error(response.StatusDescription || "Submission failed. Please try again.");
@@ -442,6 +448,7 @@ export default function App(): JSX.Element {
                 documentUploading={documentUploading}
                 documentBackUploading={documentBackUploading}
                 documentImage={documentImage}
+                documentOriginalImage={documentOriginalImage}
                 documentBackImage={documentBackImage}
                 runOCRAndMRZ={runOCRAndMRZ}
                 prevStep={prevStep}

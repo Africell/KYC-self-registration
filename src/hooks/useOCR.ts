@@ -15,6 +15,7 @@ interface UseOCRProps {
   pushError: (scope: string, message: string) => void;
   clearError: () => void;
   nextStep: () => void;
+  expireSession: (message: string) => void;
 }
 
 interface UseOCRReturn {
@@ -255,6 +256,7 @@ export function useOCR({
   pushError,
   clearError,
   nextStep,
+  expireSession,
 }: UseOCRProps): UseOCRReturn {
   const [fields, setFields] = useState<ExtractedFields>(initialFields);
   const [ocrProgress, setOcrProgress] = useState(0);
@@ -279,7 +281,7 @@ export function useOCR({
       setOcrProgress(20);
       const token = getStoredToken();
       if (!token) {
-        pushError("ocr", "Session expired. Please restart the registration.");
+        expireSession("Session expired. Please restart the registration.");
         return;
       }
 

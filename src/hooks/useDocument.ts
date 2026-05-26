@@ -44,6 +44,7 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 
 interface UseDocumentReturn {
   documentImage: string;
+  documentOriginalImage: string;
   documentQuality: DocumentQuality | null;
   documentBackImage: string;
   documentBackQuality: DocumentQuality | null;
@@ -96,6 +97,7 @@ export function useDocument({
   >("upload");
   const [documentUploading, setDocumentUploading] = useState(false);
   const [documentBackUploading, setDocumentBackUploading] = useState(false);
+  const [documentOriginalImage, setDocumentOriginalImage] = useState("");
 
   // ── Setters by side ───────────────────────────────────────────────────────
   // Keyed helpers so the shared logic below doesn't need separate branches.
@@ -169,21 +171,22 @@ export function useDocument({
       try {
         clearError();
 
+        if (file.size > 5 * 1024 * 1024) {
+          pushError(errorScope, "File size exceeds 5 MB. Please upload a smaller image.");
+          return;
+        }
+
         const dataUrl = await fileToDataUrl(file);
         const docQuality = await analyzeDocumentQuality(dataUrl);
 
         const isPng = file.type === "image/png";
-        const isLarge = file.size > 5 * 1024 * 1024;
-
         let finalUrl = dataUrl;
-        if (isPng || isLarge) {
-          finalUrl = await compressBase64Image(
-            dataUrl,
-            isPng && !isLarge ? COMPRESS_PNG_ONLY : COMPRESS_DOCUMENT,
-          );
+        if (isPng) {
+          finalUrl = await compressBase64Image(dataUrl, COMPRESS_PNG_ONLY);
         }
 
-        // Validate document type matches selection (front side only)
+        // Validate document type matches selection (front side only).
+        // If the API returns image_b64, use it — it's already rotated and cropped.
         if (side === "front" && docType) {
           const token = getStoredToken();
           if (token) {
@@ -202,6 +205,13 @@ export function useDocument({
                     `Document mismatch: you selected ${selected} but the uploaded image appears to be a ${detected}. Please upload the correct document.`,
                   );
                   return;
+                }
+
+                if (result.Data.image_b64) {
+                  setDocumentOriginalImage(finalUrl);
+                  finalUrl = result.Data.image_b64.startsWith("data:")
+                    ? result.Data.image_b64
+                    : `data:image/jpeg;base64,${result.Data.image_b64}`;
                 }
               }
             } catch {
@@ -335,6 +345,7 @@ export function useDocument({
   // ── Reset ─────────────────────────────────────────────────────────────────
   const resetDocument = useCallback(() => {
     setDocumentImage("");
+    setDocumentOriginalImage("");
     setDocumentQuality(null);
     setDocumentBackImage("");
     setDocumentBackQuality(null);
@@ -343,6 +354,7 @@ export function useDocument({
 
   return {
     documentImage,
+    documentOriginalImage,
     documentQuality,
     documentBackImage,
     documentBackQuality,

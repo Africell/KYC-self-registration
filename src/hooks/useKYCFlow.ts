@@ -21,6 +21,7 @@ interface UseKYCFlowReturn {
   pushError: (scope: string, message: string) => void;
   clearError: () => void;
   resetFlow: (extras?: () => void) => void;
+  expireSession: (message: string) => void;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -136,6 +137,13 @@ export function useKYCFlow(): UseKYCFlowReturn {
     [clearError],
   );
 
+  // Redirects to step 0 with an error toast without clearing the error first.
+  // Used when a token expiry is detected mid-flow (OCR, face match, submit).
+  const expireSession = useCallback((message: string) => {
+    setStepIndex(0);
+    setError({ scope: "Session expired", message });
+  }, []);
+
   const activeStep = steps[stepIndex] ?? steps[0];
 
   return {
@@ -151,5 +159,6 @@ export function useKYCFlow(): UseKYCFlowReturn {
     pushError,
     clearError,
     resetFlow,
+    expireSession,
   };
 }

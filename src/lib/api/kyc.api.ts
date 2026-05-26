@@ -265,6 +265,41 @@ export async function apiValidateDRCDrivingLicenceFromOCR(
   return response.data;
 }
 
+// ── Document Type Validation ──────────────────────────────────────────────────
+
+export interface ValidateDocumentTypeResponse {
+  Status: string;
+  StatusCode: number;
+  Data: {
+    confidence: number;
+    detected_class: string;
+    document_detected: boolean;
+    processing_time_ms: number;
+    scores: Record<string, number>;
+  };
+}
+
+export async function apiValidateDocumentFromOCR(
+  dataUrl: string,
+  token: string,
+): Promise<ValidateDocumentTypeResponse> {
+  const file = dataUrlToFile(dataUrl);
+  const form = new FormData();
+  form.append("file", file);
+
+  const { data } = await kycApi.post<ValidateDocumentTypeResponse>(
+    `/HTTP_ValidateDocumentFromOCR/`,
+    form,
+    {
+      headers: {
+        "Content-Type": undefined,
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+  return data;
+}
+
 // ── Face Match ────────────────────────────────────────────────────────────────
 
 export interface FaceMatchApiResponse {

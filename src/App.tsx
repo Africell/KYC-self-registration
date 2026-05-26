@@ -171,7 +171,7 @@ export default function App(): JSX.Element {
     saveDocumentBackBlobLocally,
     rehydrateDocument,
     resetDocument,
-  } = useDocument({ docWebcamRef, pushError, clearError });
+  } = useDocument({ docWebcamRef, pushError, clearError, docType });
 
   // ── OCR & MRZ ─────────────────────────────────────────────────────────────
   const {
@@ -241,6 +241,13 @@ export default function App(): JSX.Element {
   // Registered immediately after rehydration — cleans up both the KYC session
   // and the OTP token when their 15-min TTL elapses.
   useEffect(() => startExpiryWatcher(), []);
+
+  // Auto-dismiss errors after 6 seconds
+  useEffect(() => {
+    if (!error) return;
+    const id = setTimeout(clearError, 10000);
+    return () => clearTimeout(id);
+  }, [error, clearError]);
 
   // ── Auto-save watchers ────────────────────────────────────────────────────
   // Each patch is saved independently so unrelated state changes don't trigger
@@ -364,14 +371,6 @@ export default function App(): JSX.Element {
           onStepClick={goToStep}
         />
 
-        {error && (
-          <div className="mb-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            <strong className="mr-2 uppercase tracking-wide text-amber-300">
-              {error.scope}
-            </strong>
-            {error.message}
-          </div>
-        )}
 
         <div className="rounded-3xl border border-slate-700/60 bg-slate-900/85 backdrop-blur-sm p-6 shadow-2xl shadow-black/40">
             {activeStep.key === "msisdn" && (
@@ -430,7 +429,7 @@ export default function App(): JSX.Element {
             {activeStep.key === "document" && (
               <DocumentStep
                 docType={docType}
-                setDocType={setDocType}
+                setDocType={(v) => { setDocType(v); resetDocument(); }}
                 documentPreviewMode={documentPreviewMode}
                 setDocumentPreviewMode={setDocumentPreviewMode}
                 docWebcamRef={docWebcamRef}
@@ -490,6 +489,29 @@ export default function App(): JSX.Element {
             )}
           </div>
       </div>
+
+      {/* Fixed error toast — always visible regardless of scroll position */}
+      {error && (
+        <div className="fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 animate-[slideUp_0.2s_ease-out]">
+          <div className="flex items-start gap-3 rounded-2xl border border-rose-500/50 bg-slate-900 px-4 py-3.5 shadow-2xl shadow-black/60 ring-1 ring-rose-500/20">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-500/20 text-rose-400">
+              <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+              </svg>
+            </span>
+            <p className="flex-1 text-sm leading-snug text-slate-100">{error.message}</p>
+            <button
+              onClick={clearError}
+              className="mt-0.5 shrink-0 text-slate-500 transition-colors hover:text-slate-300"
+              aria-label="Dismiss"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

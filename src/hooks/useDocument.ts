@@ -1,12 +1,17 @@
-
 import { useCallback, useState } from "react";
 import { flushSync } from "react-dom";
 import type { RefObject } from "react";
 import Webcam from "react-webcam";
 
 import { analyzeDocumentQuality } from "../lib/quality";
-import { detectPossibleSpoof }    from "../lib/services/spoof.service";
-import { compressBase64Image, COMPRESS_DOCUMENT, COMPRESS_PNG_ONLY } from "../lib/api/kyc.api";
+import { detectPossibleSpoof } from "../lib/services/spoof.service";
+import {
+  compressBase64Image,
+  COMPRESS_DOCUMENT,
+  COMPRESS_PNG_ONLY,
+  apiValidateDocumentFromOCR,
+} from "../lib/api/kyc.api";
+import { getStoredToken } from "../lib/services/msisdn.service";
 import {
   fileToDataUrl,
   dataUrlToImage,
@@ -14,35 +19,58 @@ import {
   canvasToBlob,
 } from "../utils/image";
 import type { DocumentQuality } from "../types/kyc";
-import type { KYCSession }      from "../lib/services/session.service";
+import type { KYCSession } from "../lib/services/session.service";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface UseDocumentProps {
   docWebcamRef: RefObject<Webcam | null>;
-  pushError:    (scope: string, message: string) => void;
-  clearError:   () => void;
+  pushError: (scope: string, message: string) => void;
+  clearError: () => void;
+  docType: string;
 }
 
+const DETECTED_CLASS_TO_DOC_TYPE: Record<string, string> = {
+  "National IDs": "national_id",
+  "Driving License": "drivers_license",
+  Passports: "passport",
+};
+
+const DOC_TYPE_LABELS: Record<string, string> = {
+  passport: "Passport",
+  national_id: "National ID",
+  drivers_license: "Driver's License",
+};
+
 interface UseDocumentReturn {
-  documentImage:              string;
-  documentQuality:            DocumentQuality | null;
-  documentBackImage:          string;
-  documentBackQuality:        DocumentQuality | null;
-  documentPreviewMode:        "camera" | "upload";
-  setDocumentPreviewMode:     (mode: "camera" | "upload") => void;
-  captureDocument:            () => Promise<void>;
-  captureDocumentBack:        () => Promise<void>;
-  handleDocumentUpload:       (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
-  handleDocumentBackUpload:   (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
-  handleDocumentDropFile:     (file: File) => Promise<void>;
+  documentImage: string;
+  documentQuality: DocumentQuality | null;
+  documentBackImage: string;
+  documentBackQuality: DocumentQuality | null;
+  documentPreviewMode: "camera" | "upload";
+  setDocumentPreviewMode: (mode: "camera" | "upload") => void;
+  captureDocument: () => Promise<void>;
+  captureDocumentBack: () => Promise<void>;
+  handleDocumentUpload: (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => Promise<void>;
+  handleDocumentBackUpload: (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => Promise<void>;
+  handleDocumentDropFile: (file: File) => Promise<void>;
   handleDocumentBackDropFile: (file: File) => Promise<void>;
-  documentUploading:          boolean;
-  documentBackUploading:      boolean;
-  saveDocumentBlobLocally:    () => Promise<void>;
+  documentUploading: boolean;
+  documentBackUploading: boolean;
+  saveDocumentBlobLocally: () => Promise<void>;
   saveDocumentBackBlobLocally: () => Promise<void>;
   rehydrateDocument: (
-    s: Pick<KYCSession, "documentImage" | "documentBackImage" | "documentQuality" | "documentBackQuality">
+    s: Pick<
+      KYCSession,
+      | "documentImage"
+      | "documentBackImage"
+      | "documentQuality"
+      | "documentBackQuality"
+    >,
   ) => void;
   resetDocument: () => void;
 }
@@ -55,32 +83,40 @@ export function useDocument({
   docWebcamRef,
   pushError,
   clearError,
+  docType,
 }: UseDocumentProps): UseDocumentReturn {
-  const [documentImage,       setDocumentImage]       = useState("");
-  const [documentQuality,     setDocumentQuality]     = useState<DocumentQuality | null>(null);
-  const [documentBackImage,   setDocumentBackImage]   = useState("");
-  const [documentBackQuality, setDocumentBackQuality] = useState<DocumentQuality | null>(null);
-  const [documentPreviewMode,    setDocumentPreviewMode]    = useState<"camera" | "upload">("upload");
-  const [documentUploading,      setDocumentUploading]      = useState(false);
-  const [documentBackUploading,  setDocumentBackUploading]  = useState(false);
+  const [documentImage, setDocumentImage] = useState("");
+  const [documentQuality, setDocumentQuality] =
+    useState<DocumentQuality | null>(null);
+  const [documentBackImage, setDocumentBackImage] = useState("");
+  const [documentBackQuality, setDocumentBackQuality] =
+    useState<DocumentQuality | null>(null);
+  const [documentPreviewMode, setDocumentPreviewMode] = useState<
+    "camera" | "upload"
+  >("upload");
+  const [documentUploading, setDocumentUploading] = useState(false);
+  const [documentBackUploading, setDocumentBackUploading] = useState(false);
 
   // ── Setters by side ───────────────────────────────────────────────────────
   // Keyed helpers so the shared logic below doesn't need separate branches.
 
-  const setImage   = useCallback((side: DocumentSide, dataUrl: string) => {
+  const setImage = useCallback((side: DocumentSide, dataUrl: string) => {
     if (side === "front") setDocumentImage(dataUrl);
-    else                  setDocumentBackImage(dataUrl);
+    else setDocumentBackImage(dataUrl);
   }, []);
 
   const setQuality = useCallback((side: DocumentSide, q: DocumentQuality) => {
     if (side === "front") setDocumentQuality(q);
-    else                  setDocumentBackQuality(q);
+    else setDocumentBackQuality(q);
   }, []);
 
   // ── Shared: capture from webcam ───────────────────────────────────────────
   const captureFromWebcam = useCallback(async (): Promise<string> => {
     if (!docWebcamRef.current) throw new Error("Webcam not ready.");
-    const dataUrl = docWebcamRef.current.getScreenshot({ width: 1920, height: 1080 });
+    const dataUrl = docWebcamRef.current.getScreenshot({
+      width: 1920,
+      height: 1080,
+    });
     if (!dataUrl) throw new Error("Could not capture image from webcam.");
     return dataUrl;
   }, [docWebcamRef]);
@@ -100,13 +136,18 @@ export function useDocument({
         }
 
         const quality = await analyzeDocumentQuality(dataUrl);
-        const compressed = await compressBase64Image(dataUrl, COMPRESS_DOCUMENT);
+        const compressed = await compressBase64Image(
+          dataUrl,
+          COMPRESS_DOCUMENT,
+        );
         setImage(side, compressed);
         setQuality(side, quality);
       } catch (err) {
         pushError(
           errorScope,
-          err instanceof Error ? err.message : `${side} document capture failed.`,
+          err instanceof Error
+            ? err.message
+            : `${side} document capture failed.`,
         );
       }
     },
@@ -115,22 +156,23 @@ export function useDocument({
 
   const setUploading = useCallback((side: DocumentSide, val: boolean) => {
     if (side === "front") setDocumentUploading(val);
-    else                  setDocumentBackUploading(val);
+    else setDocumentBackUploading(val);
   }, []);
 
   // ── Shared: upload + analyse ──────────────────────────────────────────────
   const processFile = useCallback(
     async (side: DocumentSide, file: File): Promise<void> => {
-      const errorScope   = side === "front" ? "document" : "document-back";
-      const qualityScope = side === "front" ? "document-quality" : "document-back-quality";
+      const errorScope = side === "front" ? "document" : "document-back";
+      const qualityScope =
+        side === "front" ? "document-quality" : "document-back-quality";
       flushSync(() => setUploading(side, true));
       try {
         clearError();
 
-        const dataUrl    = await fileToDataUrl(file);
+        const dataUrl = await fileToDataUrl(file);
         const docQuality = await analyzeDocumentQuality(dataUrl);
 
-        const isPng   = file.type === "image/png";
+        const isPng = file.type === "image/png";
         const isLarge = file.size > 5 * 1024 * 1024;
 
         let finalUrl = dataUrl;
@@ -141,26 +183,61 @@ export function useDocument({
           );
         }
 
+        // Validate document type matches selection (front side only)
+        if (side === "front" && docType) {
+          const token = getStoredToken();
+          if (token) {
+            try {
+              const result = await apiValidateDocumentFromOCR(finalUrl, token);
+              if (result?.Data?.document_detected) {
+                const detectedDocType =
+                  DETECTED_CLASS_TO_DOC_TYPE[result.Data.detected_class];
+                if (detectedDocType && detectedDocType !== docType) {
+                  const selected = DOC_TYPE_LABELS[docType] ?? docType;
+                  const detected =
+                    DOC_TYPE_LABELS[detectedDocType] ??
+                    result.Data.detected_class;
+                  pushError(
+                    errorScope,
+                    `Document mismatch: you selected ${selected} but the uploaded image appears to be a ${detected}. Please upload the correct document.`,
+                  );
+                  return;
+                }
+              }
+            } catch {
+              // Validation is best-effort; don't block the upload if the API fails
+            }
+          }
+        }
+
         setImage(side, finalUrl);
         setQuality(side, docQuality);
 
         if (!docQuality.looksUsefulForOCR) {
-          pushError(qualityScope, docQuality.reasons[0] ?? "Image quality may affect OCR accuracy.");
+          pushError(
+            qualityScope,
+            docQuality.reasons[0] ?? "Image quality may affect OCR accuracy.",
+          );
         }
       } catch (err) {
         pushError(
           errorScope,
-          err instanceof Error ? err.message : `Could not read uploaded ${side} document image.`,
+          err instanceof Error
+            ? err.message
+            : `Could not read uploaded ${side} document image.`,
         );
       } finally {
         setUploading(side, false);
       }
     },
-    [clearError, pushError, setImage, setQuality, setUploading],
+    [clearError, docType, pushError, setImage, setQuality, setUploading],
   );
 
   const handleUpload = useCallback(
-    async (side: DocumentSide, e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    async (
+      side: DocumentSide,
+      e: React.ChangeEvent<HTMLInputElement>,
+    ): Promise<void> => {
       const file = e.target.files?.[0];
       if (!file) return;
       await processFile(side, file);
@@ -171,12 +248,12 @@ export function useDocument({
   // ── Shared: save locally ──────────────────────────────────────────────────
   const saveLocally = useCallback(
     async (dataUrl: string, filename: string): Promise<void> => {
-      const image  = await dataUrlToImage(dataUrl);
+      const image = await dataUrlToImage(dataUrl);
       const canvas = getCanvasFromImage(image);
-      const blob   = await canvasToBlob(canvas);
-      const url    = URL.createObjectURL(blob);
+      const blob = await canvasToBlob(canvas);
+      const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
-      anchor.href     = url;
+      anchor.href = url;
       anchor.download = filename;
       anchor.click();
       URL.revokeObjectURL(url);
@@ -186,18 +263,24 @@ export function useDocument({
 
   // ── Public API ────────────────────────────────────────────────────────────
 
-  const captureDocument      = useCallback(() => captureAndAnalyze("front"), [captureAndAnalyze]);
-  const captureDocumentBack  = useCallback(() => captureAndAnalyze("back"),  [captureAndAnalyze]);
+  const captureDocument = useCallback(
+    () => captureAndAnalyze("front"),
+    [captureAndAnalyze],
+  );
+  const captureDocumentBack = useCallback(
+    () => captureAndAnalyze("back"),
+    [captureAndAnalyze],
+  );
 
-  const handleDocumentUpload      = useCallback(
+  const handleDocumentUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => handleUpload("front", e),
     [handleUpload],
   );
-  const handleDocumentBackUpload  = useCallback(
+  const handleDocumentBackUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => handleUpload("back", e),
     [handleUpload],
   );
-  const handleDocumentDropFile     = useCallback(
+  const handleDocumentDropFile = useCallback(
     (file: File) => processFile("front", file),
     [processFile],
   );
@@ -211,7 +294,10 @@ export function useDocument({
     try {
       await saveLocally(documentImage, `document-front-${Date.now()}.jpg`);
     } catch (err) {
-      pushError("document", err instanceof Error ? err.message : "Failed to save front document.");
+      pushError(
+        "document",
+        err instanceof Error ? err.message : "Failed to save front document.",
+      );
     }
   }, [documentImage, saveLocally, pushError]);
 
@@ -220,16 +306,27 @@ export function useDocument({
     try {
       await saveLocally(documentBackImage, `document-back-${Date.now()}.jpg`);
     } catch (err) {
-      pushError("document-back", err instanceof Error ? err.message : "Failed to save back document.");
+      pushError(
+        "document-back",
+        err instanceof Error ? err.message : "Failed to save back document.",
+      );
     }
   }, [documentBackImage, saveLocally, pushError]);
 
   // ── Rehydrate ─────────────────────────────────────────────────────────────
   const rehydrateDocument = useCallback(
-    (s: Pick<KYCSession, "documentImage" | "documentBackImage" | "documentQuality" | "documentBackQuality">) => {
-      if (s.documentImage)       setDocumentImage(s.documentImage);
-      if (s.documentBackImage)   setDocumentBackImage(s.documentBackImage);
-      if (s.documentQuality)     setDocumentQuality(s.documentQuality);
+    (
+      s: Pick<
+        KYCSession,
+        | "documentImage"
+        | "documentBackImage"
+        | "documentQuality"
+        | "documentBackQuality"
+      >,
+    ) => {
+      if (s.documentImage) setDocumentImage(s.documentImage);
+      if (s.documentBackImage) setDocumentBackImage(s.documentBackImage);
+      if (s.documentQuality) setDocumentQuality(s.documentQuality);
       if (s.documentBackQuality) setDocumentBackQuality(s.documentBackQuality);
     },
     [],
@@ -241,7 +338,7 @@ export function useDocument({
     setDocumentQuality(null);
     setDocumentBackImage("");
     setDocumentBackQuality(null);
-    setDocumentPreviewMode("camera");
+    setDocumentPreviewMode("upload");
   }, []);
 
   return {

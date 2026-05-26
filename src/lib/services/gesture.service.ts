@@ -115,15 +115,15 @@ export function isRaisingRightHand(pose: PoseLandmarkerResult): boolean {
   return rightWrist.y < rightShoulder.y - 0.05;
 }
 
-export function computePitchFromPose(
-  pose: PoseLandmarkerResult,
-): number | null {
-  const lm = pose.landmarks?.[0];
-  if (!lm) return null;
-  const nose = lm[0];
-  const leftShoulder = lm[11];
-  const rightShoulder = lm[12];
-  if (!nose || !leftShoulder || !rightShoulder) return null;
-  const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
-  return nose.y - shoulderMidY;
-}
+// export function computePitchFromPose(
+//   pose: PoseLandmarkerResult,
+// ): number | null {
+//   const lm = pose.landmarks?.[0];
+//   if (!lm) return null;
+//   const nose = lm[0];
+//   const leftShoulder = lm[11];
+//   const rightShoulder = lm[12];
+//   if (!nose || !leftShoulder || !rightShoulder) return null;
+//   const shoulderMidY = (leftShoulder.y + rightShoulder.y) / 2;
+//   return nose.y - shoulderMidY;
+// }

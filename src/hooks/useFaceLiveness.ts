@@ -13,10 +13,14 @@ import {
 } from "../lib/services/face.service";
 import { waitForVideoReady } from "../lib/services/video.service";
 import { playSuccessBeep } from "../utils/audio";
-import { buildChallengeSequence, CHALLENGE_CONFIGS, TURN_YAW_TARGET } from "../lib/challenges";
+import {
+  buildChallengeSequence,
+  CHALLENGE_CONFIGS,
+  TURN_YAW_TARGET,
+} from "../lib/challenges";
 import {
   areGestureModelsLoaded,
-  computePitchFromPose,
+  // computePitchFromPose,
   detectGestures,
   isRaisingLeftHand,
   isRaisingRightHand,
@@ -40,14 +44,14 @@ type UseFaceLivenessProps = {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CHALLENGE_TIMEOUT_MS  = 8_000;
+const CHALLENGE_TIMEOUT_MS = 8_000;
 const DETECTION_INTERVAL_MS = 350;
-const PASS_STREAK_REQUIRED  = 2;
+const PASS_STREAK_REQUIRED = 2;
 
-const NOD_WINDOW          = 5;
-const NOD_PITCH_THRESHOLD = 0.028;
+// const NOD_WINDOW          = 5;
+// const NOD_PITCH_THRESHOLD = 0.028;
 
-const CLOSER_DELTA     = 0.08;
+const CLOSER_DELTA = 0.08;
 const CLOSER_MIN_RATIO = 0.28;
 
 // > 1 allows face corners slightly outside the mathematical oval edge
@@ -55,16 +59,16 @@ const OVAL_THRESHOLD = 1.15;
 
 const INITIAL_LANDMARK_STATUS: LandmarkStatus = {
   faceDetected: false,
-  yawEstimate:  0,
-  qualityOk:    false,
-  hint:         "",
-  faceBox:      null,
+  yawEstimate: 0,
+  qualityOk: false,
+  hint: "",
+  faceBox: null,
 };
 
 const POSE_CHALLENGES = new Set<LivenessChallenge>([
   "raiseLeftHand",
   "raiseRightHand",
-  "nodHead",
+  // "nodHead",
 ]);
 
 // Defined once at module level — avoids allocating option objects on every tick
@@ -90,22 +94,20 @@ function roundYaw(yaw: number): number {
   return Math.round(yaw * 10000) / 10000;
 }
 
-function isFaceInOval(
-  box: faceapi.Box,
-  vw: number,
-  vh: number,
-): boolean {
+function isFaceInOval(box: faceapi.Box, vw: number, vh: number): boolean {
   if (!vw || !vh) return false;
-  const cx = 0.50 * vw, cy = 0.48 * vh;
-  const rx = 0.22 * vw, ry = 0.31 * vh;
-  const faceCX = box.x + box.width  / 2;
+  const cx = 0.5 * vw,
+    cy = 0.48 * vh;
+  const rx = 0.22 * vw,
+    ry = 0.31 * vh;
+  const faceCX = box.x + box.width / 2;
   const faceCY = box.y + box.height / 2;
   const pts: [number, number][] = [
-    [faceCX,             box.y],
-    [faceCX,             box.y + box.height],
-    [box.x,              faceCY],
-    [box.x + box.width,  faceCY],
-    [faceCX,             faceCY],
+    [faceCX, box.y],
+    [faceCX, box.y + box.height],
+    [box.x, faceCY],
+    [box.x + box.width, faceCY],
+    [faceCX, faceCY],
   ];
   for (const [px, py] of pts) {
     const dx = (px - cx) / rx;
@@ -117,25 +119,25 @@ function isFaceInOval(
 
 // Mutates buf in place (ring buffer). Returns true when a full nod gesture
 // (sufficient range + direction reversal) is detected within the window.
-function detectNodFromWindow(buf: number[], pitch: number): boolean {
-  buf.push(pitch);
-  if (buf.length > NOD_WINDOW) buf.shift();
-  if (buf.length < NOD_WINDOW) return false;
+// function detectNodFromWindow(buf: number[], pitch: number): boolean {
+//   buf.push(pitch);
+//   if (buf.length > NOD_WINDOW) buf.shift();
+//   if (buf.length < NOD_WINDOW) return false;
 
-  const min = Math.min(...buf);
-  const max = Math.max(...buf);
-  if (max - min <= NOD_PITCH_THRESHOLD) return false;
+//   const min = Math.min(...buf);
+//   const max = Math.max(...buf);
+//   if (max - min <= NOD_PITCH_THRESHOLD) return false;
 
-  const mid  = Math.floor(buf.length / 2);
-  const fh   = buf.slice(0, mid);
-  const sh   = buf.slice(mid);
-  const fMax = Math.max(...fh), fMin = Math.min(...fh);
-  const sMax = Math.max(...sh), sMin = Math.min(...sh);
+//   const mid  = Math.floor(buf.length / 2);
+//   const fh   = buf.slice(0, mid);
+//   const sh   = buf.slice(mid);
+//   const fMax = Math.max(...fh), fMin = Math.min(...fh);
+//   const sMax = Math.max(...sh), sMin = Math.min(...sh);
 
-  // Down-then-up: first half peaks high, second half dips low
-  // Up-then-down: first half dips low, second half peaks high
-  return (fMax > sMax && fMin > sMin) || (fMin < sMin && fMax < sMax);
-}
+//   // Down-then-up: first half peaks high, second half dips low
+//   // Up-then-down: first half dips low, second half peaks high
+//   return (fMax > sMax && fMin > sMin) || (fMin < sMin && fMax < sMax);
+// }
 
 // Returns true only when the new status is meaningfully different from prev.
 // Yaw uses a 0.005 dead-band to suppress float-noise re-renders.
@@ -145,15 +147,16 @@ function landmarkStatusChanged(
   next: LandmarkStatus,
 ): boolean {
   if (prev.faceDetected !== next.faceDetected) return true;
-  if (prev.qualityOk    !== next.qualityOk)    return true;
-  if (prev.hint         !== next.hint)         return true;
+  if (prev.qualityOk !== next.qualityOk) return true;
+  if (prev.hint !== next.hint) return true;
   if (Math.abs(prev.yawEstimate - next.yawEstimate) > 0.005) return true;
-  const pb = prev.faceBox, nb = next.faceBox;
+  const pb = prev.faceBox,
+    nb = next.faceBox;
   if ((pb === null) !== (nb === null)) return true;
   if (pb && nb) {
-    if (Math.abs(pb.x      - nb.x)      > 2) return true;
-    if (Math.abs(pb.y      - nb.y)      > 2) return true;
-    if (Math.abs(pb.width  - nb.width)  > 2) return true;
+    if (Math.abs(pb.x - nb.x) > 2) return true;
+    if (Math.abs(pb.y - nb.y) > 2) return true;
+    if (Math.abs(pb.width - nb.width) > 2) return true;
     if (Math.abs(pb.height - nb.height) > 2) return true;
   }
   return false;
@@ -168,15 +171,15 @@ export function useFaceLiveness({
   challengeCount = 3,
 }: UseFaceLivenessProps) {
   const { t } = useTranslation();
-  const intervalRef           = useRef<number | null>(null);
-  const challengeTimerRef     = useRef<number | null>(null);
-  const pitchWindow           = useRef<number[]>([]);
-  const passStreakRef         = useRef(0);
+  const intervalRef = useRef<number | null>(null);
+  const challengeTimerRef = useRef<number | null>(null);
+  const pitchWindow = useRef<number[]>([]);
+  const passStreakRef = useRef(0);
   const moveCloserBaselineRef = useRef<number | null>(null);
   // Guards against overlapping async detections: if the previous tick's
   // TF.js call hasn't returned yet, skip the new tick entirely. This
   // prevents GPU contention and eliminates challenge-advance race conditions.
-  const isProcessingRef       = useRef(false);
+  const isProcessingRef = useRef(false);
 
   // ── Phase ──────────────────────────────────────────────────────────────────
   const [phase, setPhaseState] = useState<LivenessPhase>("detecting");
@@ -188,19 +191,25 @@ export function useFaceLiveness({
   }, []);
 
   // ── Challenges ─────────────────────────────────────────────────────────────
-  const [challengeSequence, setChallengeSequence] = useState<LivenessChallenge[]>(
-    () => buildChallengeSequence(challengeCount),
-  );
+  const [challengeSequence, setChallengeSequence] = useState<
+    LivenessChallenge[]
+  >(() => buildChallengeSequence(challengeCount));
   const [challengeIndex, setChallengeIndex] = useState(0);
-  const [completedSet,   setCompletedSet]   = useState<Set<LivenessChallenge>>(new Set());
+  const [completedSet, setCompletedSet] = useState<Set<LivenessChallenge>>(
+    new Set(),
+  );
 
   const challengeSequenceRef = useRef(challengeSequence);
-  const challengeIndexRef    = useRef(challengeIndex);
+  const challengeIndexRef = useRef(challengeIndex);
 
   // Safety-net syncs: covers any path that sets state without also updating
   // the ref directly (e.g. external re-renders from parent state changes).
-  useEffect(() => { challengeSequenceRef.current = challengeSequence; }, [challengeSequence]);
-  useEffect(() => { challengeIndexRef.current    = challengeIndex;    }, [challengeIndex]);
+  useEffect(() => {
+    challengeSequenceRef.current = challengeSequence;
+  }, [challengeSequence]);
+  useEffect(() => {
+    challengeIndexRef.current = challengeIndex;
+  }, [challengeIndex]);
 
   // ── Challenge timer countdown ──────────────────────────────────────────────
   const [challengeTimeLeft, setChallengeTimeLeft] = useState(
@@ -250,19 +259,22 @@ export function useFaceLiveness({
   const applyReset = useCallback(
     (freshSequence: LivenessChallenge[]) => {
       clearChallengeTimer();
-      pitchWindow.current         = [];
-      passStreakRef.current        = 0;
+      pitchWindow.current = [];
+      passStreakRef.current = 0;
       moveCloserBaselineRef.current = null;
 
       setChallengeSequence(freshSequence);
       challengeSequenceRef.current = freshSequence;
       setChallengeIndex(0);
-      challengeIndexRef.current    = 0;
+      challengeIndexRef.current = 0;
       setCompletedSet(new Set());
       setChallengeTimeLeft(CHALLENGE_TIMEOUT_MS / 1000);
 
       // Force-reset landmark status and sync the change-guard ref
-      const resetStatus = { ...INITIAL_LANDMARK_STATUS, hint: t("hint_center_face") };
+      const resetStatus = {
+        ...INITIAL_LANDMARK_STATUS,
+        hint: t("hint_center_face"),
+      };
       prevLandmarkRef.current = resetStatus;
       setLandmarkStatus(resetStatus);
       setPhase("detecting");
@@ -297,8 +309,8 @@ export function useFaceLiveness({
       currentChallenge: LivenessChallenge,
     ) => {
       clearChallengeTimer();
-      pitchWindow.current          = [];
-      passStreakRef.current         = 0;
+      pitchWindow.current = [];
+      passStreakRef.current = 0;
       moveCloserBaselineRef.current = null;
 
       if (!passed) {
@@ -312,7 +324,7 @@ export function useFaceLiveness({
         return next;
       });
 
-      const seq       = challengeSequenceRef.current;
+      const seq = challengeSequenceRef.current;
       const nextIndex = currentIndex + 1;
 
       if (nextIndex >= seq.length) {
@@ -372,20 +384,25 @@ export function useFaceLiveness({
         updateLandmarkStatus({
           ...prevLandmarkRef.current,
           faceDetected: false,
-          faceBox:      null,
-          yawEstimate:  0,
+          faceBox: null,
+          yawEstimate: 0,
         });
         return;
       }
 
-      const det    = detections[0];
+      const det = detections[0];
       const rawBox = det.detection.box;
       updateLandmarkStatus({
         faceDetected: true,
-        yawEstimate:  roundYaw(computeYawFromLandmarks(det.landmarks)),
-        qualityOk:    computeFaceQuality(det),
-        hint:         t("hint_side_photo"),
-        faceBox:      { x: rawBox.x, y: rawBox.y, width: rawBox.width, height: rawBox.height },
+        yawEstimate: roundYaw(computeYawFromLandmarks(det.landmarks)),
+        qualityOk: computeFaceQuality(det),
+        hint: t("hint_side_photo"),
+        faceBox: {
+          x: rawBox.x,
+          y: rawBox.y,
+          width: rawBox.width,
+          height: rawBox.height,
+        },
       });
     } catch {
       // Non-critical tracking — silent failure is intentional
@@ -412,18 +429,26 @@ export function useFaceLiveness({
           updateLandmarkStatus({
             ...prevLandmarkRef.current,
             faceDetected: false,
-            faceBox:      null,
-            hint:         t("hint_one_person"),
+            faceBox: null,
+            hint: t("hint_one_person"),
           });
           if (currentPhase === "ready") setPhase("detecting");
           return;
         }
 
-        const rawBox      = detections?.length === 1 ? detections[0].detection.box : null;
-        const inOval      = rawBox ? isFaceInOval(rawBox, video.videoWidth, video.videoHeight) : false;
+        const rawBox =
+          detections?.length === 1 ? detections[0].detection.box : null;
+        const inOval = rawBox
+          ? isFaceInOval(rawBox, video.videoWidth, video.videoHeight)
+          : false;
         const faceDetected = !!rawBox && inOval;
-        const faceBox      = rawBox
-          ? { x: rawBox.x, y: rawBox.y, width: rawBox.width, height: rawBox.height }
+        const faceBox = rawBox
+          ? {
+              x: rawBox.x,
+              y: rawBox.y,
+              width: rawBox.width,
+              height: rawBox.height,
+            }
           : null;
 
         const hint = !rawBox
@@ -432,9 +457,14 @@ export function useFaceLiveness({
             ? t("hint_move_into_oval")
             : t("hint_face_detected_ready");
 
-        updateLandmarkStatus({ ...prevLandmarkRef.current, faceDetected, faceBox, hint });
+        updateLandmarkStatus({
+          ...prevLandmarkRef.current,
+          faceDetected,
+          faceBox,
+          hint,
+        });
 
-        if (currentPhase === "ready"    && !faceDetected) setPhase("detecting");
+        if (currentPhase === "ready" && !faceDetected) setPhase("detecting");
         if (currentPhase === "detecting" && faceDetected) setPhase("ready");
       } catch (err) {
         console.error("[useFaceLiveness] detection error:", err);
@@ -445,7 +475,7 @@ export function useFaceLiveness({
     // ── CHALLENGING ──────────────────────────────────────────────────────
     if (currentPhase !== "challenging") return;
 
-    const currentIndex    = challengeIndexRef.current;
+    const currentIndex = challengeIndexRef.current;
     const currentSequence = challengeSequenceRef.current;
     const currentChallenge: LivenessChallenge =
       currentSequence[currentIndex] ??
@@ -469,10 +499,10 @@ export function useFaceLiveness({
       if (!detections || detections.length === 0) {
         updateLandmarkStatus({
           faceDetected: false,
-          yawEstimate:  0,
-          qualityOk:    false,
-          hint:         t("hint_no_face"),
-          faceBox:      null,
+          yawEstimate: 0,
+          qualityOk: false,
+          hint: t("hint_no_face"),
+          faceBox: null,
         });
         return;
       }
@@ -480,45 +510,62 @@ export function useFaceLiveness({
       if (detections.length > 1) {
         updateLandmarkStatus({
           faceDetected: false,
-          yawEstimate:  0,
-          qualityOk:    false,
-          hint:         t("hint_one_person"),
-          faceBox:      null,
+          yawEstimate: 0,
+          qualityOk: false,
+          hint: t("hint_one_person"),
+          faceBox: null,
         });
         return;
       }
 
-      const detection    = detections[0];
-      const yaw          = computeYawFromLandmarks(detection.landmarks);
-      const qualityOk    = computeFaceQuality(detection);
-      const gestureFrame = areGestureModelsLoaded() ? detectGestures(video) : null;
-      const rawBox       = detection.detection.box;
-      const faceBox      = { x: rawBox.x, y: rawBox.y, width: rawBox.width, height: rawBox.height };
+      const detection = detections[0];
+      const yaw = computeYawFromLandmarks(detection.landmarks);
+      const qualityOk = computeFaceQuality(detection);
+      const gestureFrame = areGestureModelsLoaded()
+        ? detectGestures(video)
+        : null;
+      const rawBox = detection.detection.box;
+      const faceBox = {
+        x: rawBox.x,
+        y: rawBox.y,
+        width: rawBox.width,
+        height: rawBox.height,
+      };
 
-      let hint      = CHALLENGE_CONFIGS[currentChallenge].instruction;
+      let hint = CHALLENGE_CONFIGS[currentChallenge].instruction;
       let framePass = false;
 
       switch (currentChallenge) {
         case "center":
-          framePass = Math.abs(yaw) < 0.10 && qualityOk;
+          framePass = Math.abs(yaw) < 0.1 && qualityOk;
           if (framePass) {
-            hint = passStreakRef.current > 0
-              ? t("hint_center_holding", { current: passStreakRef.current + 1, required: PASS_STREAK_REQUIRED })
-              : t("hint_center_hold");
+            hint =
+              passStreakRef.current > 0
+                ? t("hint_center_holding", {
+                    current: passStreakRef.current + 1,
+                    required: PASS_STREAK_REQUIRED,
+                  })
+                : t("hint_center_hold");
           } else {
-            hint = Math.abs(yaw) >= 0.10
-              ? t("hint_look_camera")
-              : t("hint_checking_quality");
+            hint =
+              Math.abs(yaw) >= 0.1
+                ? t("hint_look_camera")
+                : t("hint_checking_quality");
           }
           break;
 
         case "lookLeft": {
-          const pct = Math.min(100, Math.round(Math.max(0, yaw) / TURN_YAW_TARGET * 100));
+          const pct = Math.min(
+            100,
+            Math.round((Math.max(0, yaw) / TURN_YAW_TARGET) * 100),
+          );
           // qualityOk excluded: the face box shrinks and score drops when
           // turning, but yaw measurement remains reliable.
           framePass = yaw > TURN_YAW_TARGET;
           hint = framePass
-            ? (passStreakRef.current > 0 ? t("hint_hold_position") : t("hint_good_turn"))
+            ? passStreakRef.current > 0
+              ? t("hint_hold_position")
+              : t("hint_good_turn")
             : pct > 45
               ? t("hint_turn_left_progress", { pct })
               : t("hint_turn_left");
@@ -526,10 +573,15 @@ export function useFaceLiveness({
         }
 
         case "lookRight": {
-          const pct = Math.min(100, Math.round(Math.max(0, -yaw) / TURN_YAW_TARGET * 100));
+          const pct = Math.min(
+            100,
+            Math.round((Math.max(0, -yaw) / TURN_YAW_TARGET) * 100),
+          );
           framePass = yaw < -TURN_YAW_TARGET;
           hint = framePass
-            ? (passStreakRef.current > 0 ? t("hint_hold_position") : t("hint_good_turn"))
+            ? passStreakRef.current > 0
+              ? t("hint_hold_position")
+              : t("hint_good_turn")
             : pct > 45
               ? t("hint_turn_right_progress", { pct })
               : t("hint_turn_right");
@@ -537,12 +589,18 @@ export function useFaceLiveness({
         }
 
         case "moveCloser": {
-          const ratio = computeFaceSizeRatio(detection, video.videoWidth || 720);
+          const ratio = computeFaceSizeRatio(
+            detection,
+            video.videoWidth || 720,
+          );
           if (moveCloserBaselineRef.current === null) {
             moveCloserBaselineRef.current = ratio;
           }
-          const movedBy     = ratio - moveCloserBaselineRef.current;
-          const progressPct = Math.min(100, Math.round(movedBy / CLOSER_DELTA * 100));
+          const movedBy = ratio - moveCloserBaselineRef.current;
+          const progressPct = Math.min(
+            100,
+            Math.round((movedBy / CLOSER_DELTA) * 100),
+          );
           framePass = movedBy >= CLOSER_DELTA && ratio >= CLOSER_MIN_RATIO;
           hint = framePass
             ? t("hint_closer_hold")
@@ -566,15 +624,15 @@ export function useFaceLiveness({
           }
           break;
 
-        case "nodHead":
-          if (gestureFrame) {
-            const pitch = computePitchFromPose(gestureFrame.pose);
-            if (pitch !== null && detectNodFromWindow(pitchWindow.current, pitch)) {
-              framePass = true;
-              hint = t("hint_nod_detected");
-            }
-          }
-          break;
+        // case "nodHead":
+        //   if (gestureFrame) {
+        //     const pitch = computePitchFromPose(gestureFrame.pose);
+        //     if (pitch !== null && detectNodFromWindow(pitchWindow.current, pitch)) {
+        //       framePass = true;
+        //       hint = t("hint_nod_detected");
+        //     }
+        //   }
+        //   break;
       }
 
       if (framePass) {
@@ -587,7 +645,13 @@ export function useFaceLiveness({
         passStreakRef.current = 0;
       }
 
-      updateLandmarkStatus({ faceDetected: true, yawEstimate: roundYaw(yaw), qualityOk, hint, faceBox });
+      updateLandmarkStatus({
+        faceDetected: true,
+        yawEstimate: roundYaw(yaw),
+        qualityOk,
+        hint,
+        faceBox,
+      });
     } catch (err) {
       console.error("[useFaceLiveness] challenge detection error:", err);
     }
@@ -607,7 +671,9 @@ export function useFaceLiveness({
 
       isProcessingRef.current = true;
       const work = p === "done" ? analyzeForSideCapture() : analyzeLiveFace();
-      void work.finally(() => { isProcessingRef.current = false; });
+      void work.finally(() => {
+        isProcessingRef.current = false;
+      });
     }, DETECTION_INTERVAL_MS);
 
     return () => {
@@ -634,12 +700,19 @@ export function useFaceLiveness({
       try {
         await waitForVideoReady(video);
         if (!cancelled) {
-          await faceapi.detectAllFaces(video, TINY_OPTIONS_CHALLENGE).withFaceLandmarks();
+          await faceapi
+            .detectAllFaces(video, TINY_OPTIONS_CHALLENGE)
+            .withFaceLandmarks();
         }
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     };
     const t = window.setTimeout(() => void warmUp(), 1500);
-    return () => { cancelled = true; window.clearTimeout(t); };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, [modelsLoaded, webcamRef]);
 
   // ── Full reset (called from App handleReset) ───────────────────────────────

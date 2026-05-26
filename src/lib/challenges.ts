@@ -1,7 +1,7 @@
 // src/lib/challenges.ts
 
 import {
-  Crosshair, ArrowLeft, ArrowRight, Hand, ArrowUpDown, ZoomIn,
+  Crosshair, ArrowLeft, ArrowRight, Hand, ZoomIn,
 } from "lucide-react";
 import type { ChallengeConfig, LivenessChallenge } from "../types/kyc";
 

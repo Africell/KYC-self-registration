@@ -698,9 +698,13 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    fallbackLng: "en",
+    fallbackLng: "fr",
     debug: false,
     interpolation: { escapeValue: false },
+    detection: {
+      order: ["localStorage"],
+      caches: ["localStorage"],
+    },
     resources: {
       en: { translation: en },
       fr: { translation: fr },

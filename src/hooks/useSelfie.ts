@@ -6,6 +6,7 @@ import Webcam from "react-webcam";
 import { detectPossibleSpoof } from "../lib/services/spoof.service";
 import { getBestFaceDescriptor } from "../lib/services/face.service";
 import { dataUrlToImage } from "../utils/image";
+import { playSuccessBeep } from "../utils/audio";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -164,6 +165,7 @@ export function useSelfie({
       await getBestFaceDescriptor(await dataUrlToImage(unmirrored));
 
       triggerFlash();
+      playSuccessBeep();
       setSelfieImage(unmirrored);
       setPhase("front-captured");
 
@@ -226,6 +228,7 @@ export function useSelfie({
       if (!dataUrl) return;
       const unmirrored = await unmirrorDataUrl(dataUrl);
       triggerFlash();
+      playSuccessBeep();
       setFaceSidePhoto(unmirrored);
       setPhase("side-captured");
 

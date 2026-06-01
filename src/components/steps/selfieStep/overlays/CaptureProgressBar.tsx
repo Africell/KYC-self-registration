@@ -12,26 +12,26 @@ export function CaptureProgressBar({ phase }: CaptureProgressBarProps) {
   const activeStep = PHASE_TO_STEP[phase];
 
   return (
-    <div className="flex items-center gap-2 w-full">
+    <div className="flex items-center gap-1.5 sm:gap-2 w-full">
       {PROGRESS_STEPS.map((s, i) => {
         const done   = i < activeStep;
         const active = i === activeStep - 1 || (activeStep === 0 && i === 0);
 
         return (
-          <div key={s.key} className="flex items-center gap-2 flex-1">
-            <div className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all duration-300 flex-1 ${
+          <div key={s.key} className="flex items-center gap-1.5 sm:gap-2 flex-1">
+            <div className={`flex items-center gap-1 sm:gap-1.5 rounded-xl px-2 sm:px-3 py-1.5 text-xs font-medium transition-all duration-300 flex-1 min-w-0 ${
               done    ? "bg-emerald-900/60 border border-emerald-700/50 text-emerald-300"
               : active  ? "bg-cyan-900/60 border border-cyan-700 text-cyan-200"
               :           "bg-slate-800/60 border border-slate-700 text-slate-500"
             }`}>
-              {(() => { const Icon = s.icon; return <Icon size={13} />; })()}
-              <span className="truncate">{t(s.label)}</span>
+              {(() => { const Icon = s.icon; return <Icon size={13} className="shrink-0" />; })()}
+              <span className="hidden sm:inline truncate">{t(s.label)}</span>
               {done   && <Check size={13} className="ml-auto shrink-0" />}
-              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block" />}
+              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse inline-block shrink-0" />}
             </div>
 
             {i < PROGRESS_STEPS.length - 1 && (
-              <div className={`h-px w-3 shrink-0 transition-all duration-500 ${done ? "bg-emerald-600" : "bg-slate-700"}`} />
+              <div className={`h-px w-2 sm:w-3 shrink-0 transition-all duration-500 ${done ? "bg-emerald-600" : "bg-slate-700"}`} />
             )}
           </div>
         );

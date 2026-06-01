@@ -124,15 +124,15 @@ export function DocumentSide({
       {/* Preview + quality panel */}
       {image && (
         <div className="grid gap-4 sm:grid-cols-[1fr_220px]">
-          <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-3">
-            <p className="mb-2 text-xs font-medium text-slate-400">{previewLabel}</p>
+          <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-3 flex flex-col items-center">
+            <p className="mb-2 text-xs font-medium text-slate-400 self-start">{previewLabel}</p>
             <img
               src={image}
               alt={heading}
-              className="w-full rounded-xl object-contain"
+              className="rounded-xl object-contain max-w-full"
             />
           </div>
-          <QualityPanel quality={quality} />
+          {/* <QualityPanel quality={quality} /> */}
         </div>
       )}
 

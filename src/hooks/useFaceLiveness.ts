@@ -532,7 +532,7 @@ export function useFaceLiveness({
         height: rawBox.height,
       };
 
-      let hint = CHALLENGE_CONFIGS[currentChallenge].instruction;
+      let hint = t(CHALLENGE_CONFIGS[currentChallenge].instruction);
       let framePass = false;
 
       switch (currentChallenge) {

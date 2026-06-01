@@ -71,8 +71,17 @@ export function StatusBanner({
 
   if (capturePhase === "side-ready") return (
     <div className="flex items-center gap-3 rounded-2xl bg-emerald-950/60 border border-emerald-700/50 px-4 py-3">
-      <Check size={18} className="text-emerald-400 shrink-0" />
-      <p className="text-sm text-emerald-200 font-medium">{t("banner_side_ready")}</p>
+      <div className="text-emerald-400 text-lg font-bold shrink-0">{countdown}</div>
+      <p className="text-sm text-emerald-200 font-medium">
+        {t("banner_side_countdown", { count: countdown })}
+      </p>
+    </div>
+  );
+
+  if (capturePhase === "review") return (
+    <div className="flex items-center gap-3 rounded-2xl bg-emerald-950/60 border border-emerald-700/50 px-4 py-3">
+      <Sparkles size={18} className="text-emerald-400 shrink-0" />
+      <p className="text-sm text-emerald-200 font-medium">{t("banner_review")}</p>
     </div>
   );
 

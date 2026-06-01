@@ -138,6 +138,7 @@ export default function App(): JSX.Element {
     captureStatus,
     captureSelfie,
     captureFaceSidePhoto,
+    confirmPhotos,
     resetSelfie,
     setSelfieImage,
     setFaceSidePhoto,
@@ -419,6 +420,7 @@ export default function App(): JSX.Element {
                   resetSelfie();
                   resetLiveness();
                 }}
+                confirmPhotos={confirmPhotos}
                 captureStatus={captureStatus}
               />
             )}

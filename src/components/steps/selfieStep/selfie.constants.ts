@@ -4,7 +4,7 @@
 // Centralised here so FaceOvalOverlay, SideGuideOverlay, and SelfieStep
 // all read from one source instead of duplicating magic numbers.
 
-import { ShieldCheck, Camera, RotateCcw } from "lucide-react";
+import { ShieldCheck, Camera, RotateCcw, Images } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CaptureStatus } from "../../../hooks/useSelfie";
 
@@ -35,6 +35,7 @@ export const PROGRESS_STEPS: Array<{
   { key: "liveness", label: "selfie_step_liveness", icon: ShieldCheck },
   { key: "front",    label: "selfie_step_front",    icon: Camera      },
   { key: "side",     label: "selfie_step_side",     icon: RotateCcw   },
+  { key: "review",   label: "selfie_step_review",   icon: Images      },
 ];
 
 // Maps CaptureStatus phase → which 0-based progress step is active.
@@ -47,5 +48,6 @@ export const PHASE_TO_STEP: Record<CaptureStatus["phase"], number> = {
   "side-guide": 2,
   "side-ready": 2,
   "side-captured": 2,
-  complete: 3,
+  review: 3,
+  complete: 4,
 };

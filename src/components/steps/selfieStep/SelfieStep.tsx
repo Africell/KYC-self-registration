@@ -8,7 +8,7 @@ import type { CaptureStatus } from "../../../hooks/useSelfie";
 import type { LandmarkStatus, LivenessChallenge } from "../../../types/kyc";
 import { CHALLENGE_CONFIGS } from "../../../lib/challenges";
 
-import { AlarmClock, Camera, Check, Lock, RotateCcw } from "lucide-react";
+import { AlarmClock, Camera, Check, CheckCircle, Lock, RefreshCcw, RotateCcw, Images } from "lucide-react";
 import { TIMER_RADIUS, TIMER_CIRC } from "./selfie.constants";
 import { TURN_YAW_TARGET } from "../../../lib/challenges";
 import { CaptureProgressBar } from "./overlays/CaptureProgressBar";
@@ -38,6 +38,7 @@ interface SelfieStepProps {
   startChallenges: () => void;
   retryChallenge: () => void;
   retakeSelfie: () => void;
+  confirmPhotos: () => void;
   captureStatus: CaptureStatus;
 }
 
@@ -62,6 +63,7 @@ export default function SelfieStep({
   startChallenges,
   retryChallenge,
   retakeSelfie,
+  confirmPhotos,
   captureStatus,
 }: SelfieStepProps) {
   const { t } = useTranslation();
@@ -74,6 +76,7 @@ export default function SelfieStep({
     yawProgress,
   } = captureStatus;
 
+  const isReviewPhase = capturePhase === "review" || capturePhase === "complete";
   const isSidePhase =
     capturePhase === "side-guide" ||
     capturePhase === "side-ready" ||
@@ -88,6 +91,72 @@ export default function SelfieStep({
         ? "#fbbf24"
         : "#f87171";
   const timerDash = (timerPercent / 100) * TIMER_CIRC;
+
+  // ── Review screen ─────────────────────────────────────────────────────────
+  if (isReviewPhase) {
+    return (
+      <section className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-semibold">{t("selfie_title")}</h2>
+            <p className="mt-1 text-sm text-slate-400">{t("selfie_review_header")}</p>
+          </div>
+          <div className="self-start sm:self-auto rounded-xl sm:rounded-2xl border border-emerald-700/60 bg-emerald-950/40 px-3 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs text-emerald-300 uppercase tracking-widest shrink-0">
+            <Check size={10} className="inline-block mr-1 -mt-px" />{t("selfie_badge_review")}
+          </div>
+        </div>
+
+        <CaptureProgressBar phase={capturePhase} />
+
+        <div className="flex items-center gap-3 rounded-2xl bg-emerald-950/60 border border-emerald-700/50 px-4 py-3">
+          <Images size={18} className="text-emerald-400 shrink-0" />
+          <p className="text-sm text-emerald-200 font-medium">{t("selfie_review_title")}</p>
+        </div>
+
+        <p className="text-slate-400 text-sm text-center">{t("selfie_review_desc")}</p>
+
+        <div className="grid grid-cols-2 gap-4 sm:gap-6">
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-slate-300 text-center">{t("selfie_front_label")}</span>
+            {selfieImage && (
+              <img
+                src={selfieImage}
+                alt="Front"
+                className="rounded-2xl w-full object-cover aspect-3/4 border border-slate-700 bg-slate-900"
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-violet-400 text-center">{t("selfie_side_label")}</span>
+            {faceSidePhoto && (
+              <img
+                src={faceSidePhoto}
+                alt="Side"
+                className="rounded-2xl w-full object-cover aspect-3/4 border border-slate-700 bg-slate-900"
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={retakeSelfie}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl border border-amber-500/50 bg-amber-500/10 px-5 py-3 min-h-12 text-sm font-medium text-amber-300 hover:bg-amber-500/20 active:bg-amber-500/30 transition-colors"
+          >
+            <RefreshCcw size={15} />
+            {t("selfie_btn_retake")}
+          </button>
+          <button
+            onClick={confirmPhotos}
+            className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 min-h-12 text-sm font-semibold text-slate-950 hover:bg-emerald-400 active:bg-emerald-300 transition-colors"
+          >
+            <CheckCircle size={15} />
+            {t("selfie_btn_confirm")}
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-3 sm:space-y-4">
@@ -119,8 +188,7 @@ export default function SelfieStep({
                 {capturePhase === "front-captured" && t("selfie_front_captured_phase")}
                 {capturePhase === "side-guide" && t("selfie_side_guide_phase")}
                 {capturePhase === "side-ready" && t("selfie_side_ready_phase")}
-                {(capturePhase === "side-captured" || capturePhase === "complete") &&
-                  t("selfie_complete")}
+                {capturePhase === "side-captured" && t("selfie_complete")}
               </>
             )}
           </p>
@@ -181,6 +249,7 @@ export default function SelfieStep({
             <SideGuideOverlay
               yawProgress={yawProgress}
               isReady={capturePhase === "side-ready"}
+              countdown={countdown}
             />
           )}
 
@@ -316,29 +385,26 @@ export default function SelfieStep({
             </div>
           )}
 
-          {/* SIDE-READY: capture button on video */}
-          {capturePhase === "side-ready" && (
-            <div className="absolute inset-0 flex items-end justify-center pb-6">
-              <button
-                onClick={() => void captureFaceSidePhoto()}
-                className="flex items-center gap-2 rounded-2xl bg-emerald-500 px-8 py-3 min-h-12 font-semibold text-slate-950 hover:bg-emerald-400 active:bg-emerald-300 transition-all shadow-lg shadow-emerald-900/40 text-sm"
-              >
-                <Camera size={16} /> {t("selfie_btn_capture_side")}
-              </button>
+          {/* SIDE-GUIDE: instruction nudge */}
+          {capturePhase === "side-guide" && (
+            <div className="absolute inset-0 flex items-end justify-center pb-5 pointer-events-none">
+              <div className="flex items-center gap-2 bg-black/60 backdrop-blur rounded-2xl px-4 py-2">
+                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                <p className="text-xs text-slate-300">{t("selfie_side_turn_right")}</p>
+              </div>
             </div>
           )}
 
-          {/* SIDE-GUIDE: disabled unlock button */}
-          {capturePhase === "side-guide" && (
-            <div className="absolute inset-0 flex items-end justify-center pb-6 pointer-events-none">
-              <button
-                disabled
-                className="rounded-2xl bg-slate-700/80 px-8 py-3 font-semibold text-slate-400 text-sm cursor-not-allowed"
-              >
-                {t("selfie_btn_turn_unlock")}
-              </button>
+          {/* SIDE-READY: auto-capture countdown hint */}
+          {capturePhase === "side-ready" && (
+            <div className="absolute inset-0 flex items-end justify-center pb-5 pointer-events-none">
+              <div className="flex items-center gap-2 bg-black/60 backdrop-blur rounded-2xl px-4 py-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <p className="text-xs text-emerald-300 font-medium">{t("selfie_side_hold_still")}</p>
+              </div>
             </div>
           )}
+
         </div>
 
         {/* ── Right panel ──────────────────────────────────────────────────── */}
@@ -432,14 +498,14 @@ export default function SelfieStep({
               <div className={`rounded-xl p-3 border transition-all ${
                 capturePhase === "side-guide" || capturePhase === "side-ready"
                   ? "border-cyan-700 bg-cyan-950/40"
-                  : capturePhase === "side-captured" || capturePhase === "complete"
+                  : capturePhase === "side-captured"
                     ? "border-emerald-800/50 bg-emerald-950/30"
                     : "border-slate-700 bg-slate-900/40 opacity-50"
               }`}>
                 <div className="flex items-center gap-2 mb-1">
                   <RotateCcw size={15} className="shrink-0 text-slate-400" />
                   <span className="font-medium text-white">{t("selfie_side_photo")}</span>
-                  {(capturePhase === "side-captured" || capturePhase === "complete") && (
+                  {capturePhase === "side-captured" && (
                     <span className="ml-auto flex items-center gap-1 text-emerald-400 text-xs">
                       <Check size={12} /> {t("selfie_done")}
                     </span>
@@ -470,28 +536,6 @@ export default function SelfieStep({
             </div>
           )}
 
-          {/* Preview thumbnails */}
-          {(selfieImage || faceSidePhoto) && (
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-3 space-y-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500">
-                {t("selfie_captured")}
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {selfieImage && (
-                  <div>
-                    <div className="text-xs text-slate-500 mb-1">{t("selfie_front_label")}</div>
-                    <img src={selfieImage} alt="Selfie" className="rounded-xl w-full object-cover aspect-square" />
-                  </div>
-                )}
-                {faceSidePhoto && (
-                  <div>
-                    <div className="text-xs text-violet-400 mb-1">{t("selfie_side_label")}</div>
-                    <img src={faceSidePhoto} alt="Side" className="rounded-xl w-full object-cover aspect-square" />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -504,15 +548,6 @@ export default function SelfieStep({
           {t("back")}
         </button>
 
-        {capturePhase === "complete" && selfieImage && (
-          <button
-            onClick={retakeSelfie}
-            className="rounded-2xl border border-amber-500/50 bg-amber-500/10 px-5 py-3 min-h-12 text-sm font-medium text-amber-300 hover:bg-amber-500/20 active:bg-amber-500/30 transition-colors"
-          >
-            {t("selfie_btn_retake")}
-          </button>
-        )}
-
         {!isCapturePhase && (
           <button
             disabled
@@ -522,22 +557,22 @@ export default function SelfieStep({
           </button>
         )}
 
-        {capturePhase === "side-ready" && (
-          <button
-            onClick={() => void captureFaceSidePhoto()}
-            className="flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 min-h-12 font-medium text-slate-950 hover:bg-emerald-400 active:bg-emerald-300 transition-colors"
-          >
-            <Camera size={16} /> {t("selfie_btn_capture_side")}
-          </button>
-        )}
-
-        {capturePhase === "side-guide" && (
-          <button
-            disabled
-            className="rounded-2xl bg-slate-700 px-5 py-3 min-h-12 font-medium text-slate-500 cursor-not-allowed text-sm"
-          >
-            {t("selfie_turn_head")}
-          </button>
+        {(capturePhase === "side-guide" || capturePhase === "side-ready") && (
+          <div className="flex items-center gap-2 rounded-2xl bg-slate-800/60 border border-slate-700 px-5 py-3 min-h-12 text-sm text-slate-400">
+            {capturePhase === "side-ready" ? (
+              <>
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span className="text-emerald-300 font-medium">
+                  {t("selfie_side_capturing_in", { count: countdown })}
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                <span>{t("selfie_side_turn_right")}</span>
+              </>
+            )}
+          </div>
         )}
       </div>
     </section>

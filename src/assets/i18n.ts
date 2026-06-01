@@ -76,7 +76,7 @@ const en = {
   selfie_front_countdown: "Capturing in {{count}}s — hold still!",
   selfie_front_captured_phase: "Front photo captured!",
   selfie_side_guide_phase: "Now turn your head to capture the side profile.",
-  selfie_side_ready_phase: "Perfect! Tap the button to take the side photo.",
+  selfie_side_ready_phase: "Hold still — capturing in {{count}}s…",
   selfie_complete: "All done! Moving to next step…",
   selfie_badge_side: "Step 2 / 2 — Side",
   selfie_badge_front: "Step 1 / 2 — Front",
@@ -102,15 +102,20 @@ const en = {
     "Face the camera directly. Auto-capture begins when your face quality is good.",
   selfie_side_photo: "Side Photo",
   selfie_side_desc:
-    "Slowly turn your head right. The button activates when angle is good.",
+    "Slowly turn your head right. It captures automatically when the angle is good.",
   selfie_turn_angle: "Turn angle",
   selfie_captured: "Captured",
   selfie_front_label: "Front",
   selfie_side_label: "Side",
-  selfie_btn_retake: "Retake photos",
+  selfie_btn_retake: "Retake",
   selfie_auto_capturing: "Auto-capturing…",
   selfie_complete_liveness: "Complete liveness first",
   selfie_turn_head: "Turn your head to unlock →",
+  selfie_review_header: "Review your photos",
+  selfie_review_title: "Photos captured — do they look good?",
+  selfie_review_desc: "Check both photos below. If they look clear and well-framed, tap Confirm to continue.",
+  selfie_badge_review: "Review",
+  selfie_btn_confirm: "Looks Good →",
 
   // ── Status banner ─────────────────────────────────────────────────────────────
   banner_position: "Position your face in the oval to begin auto-capture",
@@ -121,8 +126,10 @@ const en = {
   banner_side_title: "Now take a side photo",
   banner_side_hint:
     "Slowly turn your head to the right until the indicator fills",
-  banner_side_ready: "Perfect angle! Tap the button to capture.",
+  banner_side_ready: "Perfect angle! Hold still — capturing automatically…",
+  banner_side_countdown: "Capturing in {{count}}s — hold still!",
   banner_all_captured: "All photos captured! Proceeding…",
+  banner_review: "Both photos captured — review and confirm below.",
 
   // ── Document ──────────────────────────────────────────────────────────────────
   doc_title: "Document capture",
@@ -327,8 +334,11 @@ const en = {
   selfie_step_liveness: "Liveness",
   selfie_step_front: "Front Photo",
   selfie_step_side: "Side Photo",
+  selfie_step_review: "Review",
   selfie_side_good_capture: "Good! Now capture →",
   selfie_side_turn_right: "Turn your head right",
+  selfie_side_hold_still: "Hold still…",
+  selfie_side_capturing_in: "Capturing in {{count}}s…",
 };
 
 const fr: typeof en = {
@@ -410,8 +420,7 @@ const fr: typeof en = {
   selfie_front_countdown: "Capture dans {{count}}s — restez immobile !",
   selfie_front_captured_phase: "Photo frontale capturée !",
   selfie_side_guide_phase: "Tournez la tête pour capturer le profil.",
-  selfie_side_ready_phase:
-    "Parfait ! Appuyez pour prendre la photo de profil.",
+  selfie_side_ready_phase: "Restez immobile — capture dans {{count}}s…",
   selfie_complete: "Tout est prêt ! Passage à l'étape suivante…",
   selfie_badge_side: "Étape 2 / 2 — Profil",
   selfie_badge_front: "Étape 1 / 2 — Face",
@@ -437,15 +446,20 @@ const fr: typeof en = {
     "Faites face à la caméra. La capture automatique commence quand la qualité est bonne.",
   selfie_side_photo: "Photo de profil",
   selfie_side_desc:
-    "Tournez lentement la tête à droite. Le bouton s'active quand l'angle est bon.",
+    "Tournez lentement la tête à droite. La capture se fait automatiquement quand l'angle est bon.",
   selfie_turn_angle: "Angle de rotation",
   selfie_captured: "Capturé",
   selfie_front_label: "Face",
   selfie_side_label: "Profil",
-  selfie_btn_retake: "Reprendre les photos",
+  selfie_btn_retake: "Reprendre",
   selfie_auto_capturing: "Capture automatique…",
   selfie_complete_liveness: "Complétez la vivacité d'abord",
   selfie_turn_head: "Tournez la tête pour déverrouiller →",
+  selfie_review_header: "Vérifiez vos photos",
+  selfie_review_title: "Photos capturées — sont-elles bonnes ?",
+  selfie_review_desc: "Vérifiez les deux photos ci-dessous. Si elles sont claires et bien cadrées, appuyez sur Confirmer pour continuer.",
+  selfie_badge_review: "Vérification",
+  selfie_btn_confirm: "C'est bon →",
 
   // ── Status banner ─────────────────────────────────────────────────────────────
   banner_position:
@@ -460,8 +474,10 @@ const fr: typeof en = {
   banner_side_title: "Prenez maintenant une photo de profil",
   banner_side_hint:
     "Tournez lentement la tête à droite jusqu'à ce que l'indicateur se remplisse",
-  banner_side_ready: "Angle parfait ! Appuyez pour capturer.",
+  banner_side_ready: "Angle parfait ! Restez immobile — capture automatique…",
+  banner_side_countdown: "Capture dans {{count}}s — restez immobile !",
   banner_all_captured: "Toutes les photos capturées ! Poursuite…",
+  banner_review: "Les deux photos sont capturées — vérifiez et confirmez ci-dessous.",
 
   // ── Document ──────────────────────────────────────────────────────────────────
   doc_title: "Capture de document",
@@ -671,8 +687,11 @@ const fr: typeof en = {
   selfie_step_liveness: "Vivacité",
   selfie_step_front: "Photo frontale",
   selfie_step_side: "Photo de profil",
+  selfie_step_review: "Vérification",
   selfie_side_good_capture: "Parfait ! Capturez maintenant →",
   selfie_side_turn_right: "Tournez la tête à droite",
+  selfie_side_hold_still: "Restez immobile…",
+  selfie_side_capturing_in: "Capture dans {{count}}s…",
 };
 
 i18n

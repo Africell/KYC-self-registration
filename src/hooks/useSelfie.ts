@@ -17,6 +17,7 @@ export type CapturePhase =
   | "side-guide"
   | "side-ready"
   | "side-captured"
+  | "review"
   | "complete";
 
 export type CaptureStatus = {
@@ -43,6 +44,7 @@ interface UseSelfieReturn {
   captureStatus: CaptureStatus;
   captureSelfie: () => Promise<void>;
   captureFaceSidePhoto: () => Promise<void>;
+  confirmPhotos: () => void;
   resetSelfie: () => void;
   setSelfieImage: (v: string) => void;
   setFaceSidePhoto: (v: string) => void;  // ← exposed for rehydration
@@ -54,6 +56,8 @@ const FRONT_COUNTDOWN_SEC  = 3;
 const FLASH_DURATION_MS    = 400;
 const SIDE_YAW_THRESHOLD   = 0.18;
 const SIDE_YAW_FULL        = 0.32;
+const SIDE_HOLD_SEC        = 3;    // seconds to hold angle before auto-capture
+const SIDE_YAW_CANCEL      = 0.10; // hysteresis: cancel countdown if drops below this
 
 // ─── Helper: un-mirror webcam screenshot ──────────────────────────────────────
 
@@ -97,6 +101,7 @@ export function useSelfie({
   const capturePhaseRef    = useRef<CapturePhase>("idle");
   const countdownRef       = useRef(FRONT_COUNTDOWN_SEC);
   const countdownTimerRef  = useRef<number | null>(null);
+  const sideTimerRef       = useRef<number | null>(null);
   const flashTimerRef      = useRef<number | null>(null);
 
   const setPhase = (p: CapturePhase) => {
@@ -124,11 +129,19 @@ export function useSelfie({
     }, FLASH_DURATION_MS);
   }, []);
 
-  // ── Clear countdown ────────────────────────────────────────────────────────
+  // ── Clear front countdown ──────────────────────────────────────────────────
   const clearCountdown = useCallback(() => {
     if (countdownTimerRef.current) {
       window.clearInterval(countdownTimerRef.current);
       countdownTimerRef.current = null;
+    }
+  }, []);
+
+  // ── Clear side hold timer ──────────────────────────────────────────────────
+  const clearSideTimer = useCallback(() => {
+    if (sideTimerRef.current) {
+      window.clearInterval(sideTimerRef.current);
+      sideTimerRef.current = null;
     }
   }, []);
 
@@ -196,17 +209,6 @@ export function useSelfie({
     }
   }, [capturePhase, faceDetected, faceQualityOk, startCountdown, clearCountdown]);
 
-  // ── Effect 2: side-guide / side-ready ─────────────────────────────────────
-  useEffect(() => {
-    if (capturePhase === "side-guide" || capturePhase === "side-ready") {
-      if (Math.abs(yawEstimate) >= SIDE_YAW_THRESHOLD) {
-        setPhase("side-ready");
-      } else {
-        if (capturePhase === "side-ready") setPhase("side-guide");
-      }
-    }
-  }, [capturePhase, yawEstimate]);
-
   // ── Manual fallback: capture front selfie ──────────────────────────────────
   const captureSelfie = useCallback(async () => {
     if (!livenessDone) {
@@ -217,8 +219,8 @@ export function useSelfie({
     await doCaptureFront();
   }, [livenessDone, pushError, clearCountdown, doCaptureFront]);
 
-  // ── Capture side photo (button-triggered) ──────────────────────────────────
-  const captureFaceSidePhoto = useCallback(async () => {
+  // ── Internal: do the actual side capture ──────────────────────────────────
+  const doCaptureSide = useCallback(async () => {
     try {
       const dataUrl = webcamRef.current?.getScreenshot({ width: 1280, height: 720 });
       if (!dataUrl) return;
@@ -228,32 +230,78 @@ export function useSelfie({
       setPhase("side-captured");
 
       window.setTimeout(() => {
-        setPhase("complete");
-        nextStep();
+        setPhase("review");
       }, 700);
     } catch {
       // non-critical
     }
-  }, [webcamRef, nextStep, triggerFlash]);
+  }, [webcamRef, triggerFlash]);
+
+  // ── Confirm photos and advance to next step ────────────────────────────────
+  const confirmPhotos = useCallback(() => {
+    setPhase("complete");
+    nextStep();
+  }, [nextStep]);
+
+  // ── Start side hold-and-auto-capture countdown ─────────────────────────────
+  const startSideCountdown = useCallback(() => {
+    if (sideTimerRef.current !== null) return; // already counting
+    let remaining = SIDE_HOLD_SEC;
+    setCountdown(remaining);
+    setPhase("side-ready");
+
+    sideTimerRef.current = window.setInterval(() => {
+      remaining -= 1;
+      countdownRef.current = remaining;
+      setCountdown(remaining);
+      if (remaining <= 0) {
+        clearSideTimer();
+        void doCaptureSide();
+      }
+    }, 1000);
+  }, [clearSideTimer, doCaptureSide]);
+
+  // ── Public: manual fallback side capture ───────────────────────────────────
+  const captureFaceSidePhoto = useCallback(async () => {
+    clearSideTimer();
+    await doCaptureSide();
+  }, [clearSideTimer, doCaptureSide]);
+
+  // ── Effect 2: side-guide / side-ready (auto-capture countdown) ───────────
+  useEffect(() => {
+    if (capturePhase === "side-guide") {
+      if (Math.abs(yawEstimate) >= SIDE_YAW_THRESHOLD) {
+        startSideCountdown();
+      }
+    } else if (capturePhase === "side-ready") {
+      if (Math.abs(yawEstimate) < SIDE_YAW_CANCEL) {
+        clearSideTimer();
+        setCountdown(SIDE_HOLD_SEC);
+        setPhase("side-guide");
+      }
+    }
+  }, [capturePhase, yawEstimate, startSideCountdown, clearSideTimer]);
 
   // ── Reset ──────────────────────────────────────────────────────────────────
   const resetSelfie = useCallback(() => {
     clearCountdown();
+    clearSideTimer();
     if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
     setSelfieImage("");
     setFaceSidePhoto("");
     setPhase("idle");
     setCountdown(FRONT_COUNTDOWN_SEC);
     setFlashActive(false);
-  }, [clearCountdown]);
+  }, [clearCountdown, clearSideTimer]);
 
   // ── Cleanup ────────────────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       clearCountdown();
+      clearSideTimer();
       if (flashTimerRef.current) window.clearTimeout(flashTimerRef.current);
     };
-  }, [clearCountdown]);
+  }, [clearCountdown, clearSideTimer]);
 
   const captureStatus: CaptureStatus = {
     phase: capturePhase,
@@ -268,6 +316,7 @@ export function useSelfie({
     captureStatus,
     captureSelfie,
     captureFaceSidePhoto,
+    confirmPhotos,
     resetSelfie,
     setSelfieImage,
     setFaceSidePhoto,

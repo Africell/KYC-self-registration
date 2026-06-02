@@ -87,26 +87,10 @@ export async function analyzeDocumentQuality(dataUrl: string): Promise<DocumentQ
     looksLowGlare            &&
     hasEnoughDetail;
 
-  // ── Reasons ───────────────────────────────────────────────────────────────
-  const reasons: string[] = [];
-
-  if (width < OCR_MIN_WIDTH || height < OCR_MIN_HEIGHT)
-    reasons.push("Image resolution is low for OCR.");
-  if (blurStatus === "bad")
-    reasons.push("Image is too blurry.");
-  else if (blurStatus === "ok")
-    reasons.push("Image is slightly blurry.");
-  if (!looksBrightEnough)
-    reasons.push("Lighting or contrast looks weak.");
-  if (!looksLowGlare)
-    reasons.push("Glare is too high.");
-  if (!hasEnoughDetail)
-    reasons.push("Document details look faint or low-definition.");
-
   return {
     width, height, brightness, contrast, blurScore,
     edgeDensity, aspectRatio, glareRatio,
     looksSharpEnough, looksBrightEnough, looksLowGlare,
-    looksUsefulForOCR, reasons,
+    looksUsefulForOCR, reasons: [],
   };
 }

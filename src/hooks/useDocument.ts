@@ -8,7 +8,6 @@ import { detectPossibleSpoof } from "../lib/services/spoof.service";
 import {
   compressBase64Image,
   COMPRESS_DOCUMENT,
-  COMPRESS_PNG_ONLY,
   apiValidateDocumentFromOCR,
 } from "../lib/api/kyc.api";
 import { getStoredToken } from "../lib/services/msisdn.service";
@@ -30,16 +29,13 @@ interface UseDocumentProps {
   docType: string;
 }
 
-const DETECTED_CLASS_TO_DOC_TYPE: Record<string, string> = {
-  "National IDs": "national_id",
-  "Driving License": "drivers_license",
-  Passports: "passport",
-};
-
-const DOC_TYPE_LABELS: Record<string, string> = {
-  passport: "Passport",
-  national_id: "National ID",
-  drivers_license: "Driver's License",
+const DOC_TYPE_TO_API_DOC_TYPE: Record<
+  string,
+  "drc_id" | "drc_dl" | "passport"
+> = {
+  national_id: "drc_id",
+  drivers_license: "drc_dl",
+  passport: "passport",
 };
 
 interface UseDocumentReturn {
@@ -165,70 +161,60 @@ export function useDocument({
   const processFile = useCallback(
     async (side: DocumentSide, file: File): Promise<void> => {
       const errorScope = side === "front" ? "document" : "document-back";
-      const qualityScope =
-        side === "front" ? "document-quality" : "document-back-quality";
       flushSync(() => setUploading(side, true));
       try {
         clearError();
 
         if (file.size > 5 * 1024 * 1024) {
-          pushError(errorScope, "File size exceeds 5 MB. Please upload a smaller image.");
+          pushError(
+            errorScope,
+            "File size exceeds 5 MB. Please upload a smaller image.",
+          );
           return;
         }
 
         const dataUrl = await fileToDataUrl(file);
         const docQuality = await analyzeDocumentQuality(dataUrl);
-
-        const isPng = file.type === "image/png";
         let finalUrl = dataUrl;
-        if (isPng) {
-          finalUrl = await compressBase64Image(dataUrl, COMPRESS_PNG_ONLY);
-        }
 
-        // Validate document type matches selection (front side only).
-        // If the API returns image_b64, use it — it's already rotated and cropped.
+        // Validate document and use the cropped/rotated image returned by the API (front side only).
         if (side === "front" && docType) {
           const token = getStoredToken();
           if (token) {
             try {
-              const result = await apiValidateDocumentFromOCR(finalUrl, token);
-              if (result?.Data?.document_detected) {
-                const detectedDocType =
-                  DETECTED_CLASS_TO_DOC_TYPE[result.Data.detected_class];
-                if (detectedDocType && detectedDocType !== docType) {
-                  const selected = DOC_TYPE_LABELS[docType] ?? docType;
-                  const detected =
-                    DOC_TYPE_LABELS[detectedDocType] ??
-                    result.Data.detected_class;
-                  pushError(
-                    errorScope,
-                    `Document mismatch: you selected ${selected} but the uploaded image appears to be a ${detected}. Please upload the correct document.`,
-                  );
-                  return;
-                }
-
-                if (result.Data.image_b64) {
-                  setDocumentOriginalImage(finalUrl);
-                  finalUrl = result.Data.image_b64.startsWith("data:")
-                    ? result.Data.image_b64
-                    : `data:image/jpeg;base64,${result.Data.image_b64}`;
-                }
+              const apiDocType = DOC_TYPE_TO_API_DOC_TYPE[docType] ?? "drc_id";
+              const result = await apiValidateDocumentFromOCR(
+                dataUrl,
+                token,
+                apiDocType,
+              );
+              if (!result?.Data?.success) {
+                pushError(
+                  errorScope,
+                  result?.Data?.reason ??
+                    "Document validation failed. Please retake the photo.",
+                );
+                return;
+              }
+              if (result.Data.cropped_image) {
+                setDocumentOriginalImage(dataUrl);
+                finalUrl = `data:image/jpeg;base64,${result.Data.cropped_image}`;
+              } else {
+                finalUrl = await compressBase64Image(dataUrl, COMPRESS_DOCUMENT);
               }
             } catch {
-              // Validation is best-effort; don't block the upload if the API fails
+              // Validation is best-effort; compress locally as fallback
+              finalUrl = await compressBase64Image(dataUrl, COMPRESS_DOCUMENT);
             }
+          } else {
+            finalUrl = await compressBase64Image(dataUrl, COMPRESS_DOCUMENT);
           }
+        } else {
+          finalUrl = await compressBase64Image(dataUrl, COMPRESS_DOCUMENT);
         }
 
         setImage(side, finalUrl);
         setQuality(side, docQuality);
-
-        if (!docQuality.looksUsefulForOCR) {
-          pushError(
-            qualityScope,
-            docQuality.reasons[0] ?? "Image quality may affect OCR accuracy.",
-          );
-        }
       } catch (err) {
         pushError(
           errorScope,

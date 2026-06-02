@@ -265,10 +265,7 @@ export function useOCR({
   const [busy, setBusy] = useState(false);
 
   const runOCRAndMRZ = useCallback(async (): Promise<void> => {
-    if (!documentImage) {
-      pushError("ocr", "Capture or upload a document image first.");
-      return;
-    }
+    if (!documentImage) return;
 
     try {
       clearError();

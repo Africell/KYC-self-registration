@@ -270,19 +270,25 @@ export async function apiValidateDRCDrivingLicenceFromOCR(
 export interface ValidateDocumentTypeResponse {
   Status: string;
   StatusCode: number;
+  StatusDescription: string;
   Data: {
     confidence: number;
-    detected_class: string;
-    document_detected: boolean;
+    cropped_image: string | null;
+    detected: boolean;
+    doc_type: string;
+    flip_180: boolean;
+    mrz_partial: boolean;
     processing_time_ms: number;
-    scores: Record<string, number>;
-    image_b64?: string;
+    reason?: string;
+    success: boolean;
+    total_angle: number;
   };
 }
 
 export async function apiValidateDocumentFromOCR(
   dataUrl: string,
   token: string,
+  docType: "drc_id" | "drc_dl" | "passport",
 ): Promise<ValidateDocumentTypeResponse> {
   const file = dataUrlToFile(dataUrl);
   const form = new FormData();
@@ -292,6 +298,7 @@ export async function apiValidateDocumentFromOCR(
     `/HTTP_ValidateDocumentFromOCR/`,
     form,
     {
+      params: { doc_type: docType },
       headers: {
         "Content-Type": undefined,
         Authorization: `Bearer ${token}`,

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Webcam from "react-webcam";
-import { QualityPanel } from "./QualityPanel";
+// import { QualityPanel } from "./QualityPanel";
 import type { DocumentQuality } from "../../../types/kyc";
 
 const DOC_TYPE_KEY_MAP: Record<string, string> = {
@@ -13,7 +13,7 @@ const DOC_TYPE_KEY_MAP: Record<string, string> = {
 interface DocumentSideProps {
   side:                "front" | "back";
   docType:             string;
-  previewMode:         "camera" | "upload";
+  previewMode:         "upload";
   docWebcamRef:        React.RefObject<Webcam | null>;
   docVideoConstraints: MediaTrackConstraints;
   image:               string;
@@ -28,25 +28,25 @@ interface DocumentSideProps {
 export function DocumentSide({
   side,
   docType,
-  previewMode,
-  docWebcamRef,
-  docVideoConstraints,
+  // previewMode,
+  // docWebcamRef,
+  // docVideoConstraints,
   image,
-  quality,
-  onCapture,
+  // quality,
+  // onCapture,
   onUpload,
   onDropFile,
   isLoading,
-  onDownload,
+  // onDownload,
 }: DocumentSideProps) {
   const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
 
   const isFront      = side === "front";
   const heading      = t(isFront ? "side_front_heading" : "side_back_heading");
-  const captureLabel = t(isFront ? "side_front_capture" : "side_back_capture");
+  // const captureLabel = t(isFront ? "side_front_capture" : "side_back_capture");
   const previewLabel = t(isFront ? "side_front_preview" : "side_back_preview");
-  const downloadLabel = t(isFront ? "side_download_front" : "side_download_back");
+  // const downloadLabel = t(isFront ? "side_download_front" : "side_download_back");
   const docLabel     = t(DOC_TYPE_KEY_MAP[docType] ?? "doc_passport");
 
   return (
@@ -137,7 +137,7 @@ export function DocumentSide({
       )}
 
       {/* Actions */}
-      <div className="flex flex-wrap gap-2">
+      {/* <div className="flex flex-wrap gap-2">
         {previewMode === "camera" && (
           <button
             onClick={onCapture}
@@ -160,7 +160,7 @@ export function DocumentSide({
           </svg>
           {downloadLabel}
         </button>
-      </div>
+      </div> */}
     </div>
   );
 }

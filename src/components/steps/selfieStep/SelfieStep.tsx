@@ -54,7 +54,7 @@ export default function SelfieStep({
   prevStep,
   selfieImage,
   faceSidePhoto,
-  captureFaceSidePhoto,
+  // captureFaceSidePhoto,
   livenessChallenge,
   challengeSequence,
   challengeIndex,

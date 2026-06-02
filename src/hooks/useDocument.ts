@@ -44,8 +44,8 @@ interface UseDocumentReturn {
   documentQuality: DocumentQuality | null;
   documentBackImage: string;
   documentBackQuality: DocumentQuality | null;
-  documentPreviewMode: "camera" | "upload";
-  setDocumentPreviewMode: (mode: "camera" | "upload") => void;
+  documentPreviewMode: "upload";
+  setDocumentPreviewMode: (mode: "upload") => void;
   captureDocument: () => Promise<void>;
   captureDocumentBack: () => Promise<void>;
   handleDocumentUpload: (
@@ -89,7 +89,7 @@ export function useDocument({
   const [documentBackQuality, setDocumentBackQuality] =
     useState<DocumentQuality | null>(null);
   const [documentPreviewMode, setDocumentPreviewMode] = useState<
-    "camera" | "upload"
+    "upload"
   >("upload");
   const [documentUploading, setDocumentUploading] = useState(false);
   const [documentBackUploading, setDocumentBackUploading] = useState(false);

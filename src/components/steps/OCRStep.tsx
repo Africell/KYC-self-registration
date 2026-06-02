@@ -92,8 +92,8 @@ export default function OCRStep({
   setFields,
   runFaceMatch,
   prevStep,
-  mrzValid,
-  mrzMessage,
+  // mrzValid,
+  // mrzMessage,
   busy,
   docType,
 }: OCRStepProps) {

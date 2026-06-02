@@ -165,10 +165,10 @@ export function useDocument({
       try {
         clearError();
 
-        if (file.size > 5 * 1024 * 1024) {
+        if (file.size > 10 * 1024 * 1024) {
           pushError(
             errorScope,
-            "File size exceeds 5 MB. Please upload a smaller image.",
+            "File size exceeds 10 MB. Please upload a smaller image.",
           );
           return;
         }

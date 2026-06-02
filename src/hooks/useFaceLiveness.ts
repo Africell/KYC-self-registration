@@ -54,8 +54,6 @@ const PASS_STREAK_REQUIRED = 2;
 const CLOSER_DELTA = 0.08;
 const CLOSER_MIN_RATIO = 0.28;
 
-// > 1 allows face corners slightly outside the mathematical oval edge
-const OVAL_THRESHOLD = 1.15;
 
 const INITIAL_LANDMARK_STATUS: LandmarkStatus = {
   faceDetected: false,
@@ -95,26 +93,7 @@ function roundYaw(yaw: number): number {
 }
 
 function isFaceInOval(box: faceapi.Box, vw: number, vh: number): boolean {
-  if (!vw || !vh) return false;
-  const cx = 0.5 * vw,
-    cy = 0.48 * vh;
-  const rx = 0.22 * vw,
-    ry = 0.31 * vh;
-  const faceCX = box.x + box.width / 2;
-  const faceCY = box.y + box.height / 2;
-  const pts: [number, number][] = [
-    [faceCX, box.y],
-    [faceCX, box.y + box.height],
-    [box.x, faceCY],
-    [box.x + box.width, faceCY],
-    [faceCX, faceCY],
-  ];
-  for (const [px, py] of pts) {
-    const dx = (px - cx) / rx;
-    const dy = (py - cy) / ry;
-    if (dx * dx + dy * dy > OVAL_THRESHOLD) return false;
-  }
-  return true;
+  return !!(box && vw && vh);
 }
 
 // Mutates buf in place (ring buffer). Returns true when a full nod gesture

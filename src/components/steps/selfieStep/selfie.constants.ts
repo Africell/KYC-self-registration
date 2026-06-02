@@ -17,8 +17,8 @@ export const VIDEO_H = 540;
 
 export const GUIDE_CX = 50; // oval centre-x  (% of viewBox width)
 export const GUIDE_CY = 48; // oval centre-y  (% of viewBox height)
-export const GUIDE_RX = 22; // oval x-radius
-export const GUIDE_RY = 31; // oval y-radius
+export const GUIDE_RX = 30; // oval x-radius
+export const GUIDE_RY = 40; // oval y-radius
 
 // ── Timer arc ─────────────────────────────────────────────────────────────────
 

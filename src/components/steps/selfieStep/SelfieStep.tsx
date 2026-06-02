@@ -115,14 +115,14 @@ export default function SelfieStep({
 
         <p className="text-slate-400 text-sm text-center">{t("selfie_review_desc")}</p>
 
-        <div className="grid grid-cols-2 gap-4 sm:gap-6">
+        <div className="flex gap-5 md:flex-nowrap flex-wrap">
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-slate-300 text-center">{t("selfie_front_label")}</span>
             {selfieImage && (
               <img
                 src={selfieImage}
                 alt="Front"
-                className="rounded-2xl w-full object-cover aspect-3/4 border border-slate-700 bg-slate-900"
+                className="rounded-2xl w-full md:object-cover aspect-square  border border-slate-700 bg-slate-900"
               />
             )}
           </div>
@@ -132,7 +132,7 @@ export default function SelfieStep({
               <img
                 src={faceSidePhoto}
                 alt="Side"
-                className="rounded-2xl w-full object-cover aspect-3/4 border border-slate-700 bg-slate-900"
+                className="rounded-2xl w-full md:object-cover aspect-square border border-slate-700 bg-slate-900"
               />
             )}
           </div>

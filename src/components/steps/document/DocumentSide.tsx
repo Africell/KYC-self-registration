@@ -68,7 +68,7 @@ export function DocumentSide({
       </div>
 
       {/* Input area */}
-      {previewMode === "camera" ? (
+      {/* {previewMode === "camera" ? (
         <div className="relative overflow-hidden rounded-2xl border border-slate-700 bg-black">
           <Webcam
             ref={docWebcamRef}
@@ -84,7 +84,7 @@ export function DocumentSide({
             {t("side_align")}
           </p>
         </div>
-      ) : (
+      ) : ( */}
         <label
           className={`group flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
             isLoading
@@ -119,7 +119,7 @@ export function DocumentSide({
           </div>
           <input type="file" accept="image/*" className="hidden" onChange={onUpload} disabled={isLoading} />
         </label>
-      )}
+      {/* )} */}
 
       {/* Preview + quality panel */}
       {image && (

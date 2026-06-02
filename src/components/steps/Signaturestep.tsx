@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import SignatureCanvas from "react-signature-canvas";
@@ -59,6 +59,7 @@ export default function SignatureStep({
   const { t } = useTranslation();
   const fileRef               = useRef<HTMLInputElement>(null);
   const sigCanvasRef          = useRef<SignatureCanvas>(null);
+  const savedSigRef           = useRef<string>("");
   const [tab, setTab]         = useState<"upload" | "draw">("upload");
   const [hasDrawn, setHasDrawn] = useState(false);
   const [error, setError]     = useState("");
@@ -108,11 +109,30 @@ export default function SignatureStep({
     e.target.value = "";
   };
 
+  // react-signature-canvas clears the canvas on every window resize (mobile
+  // scroll hides/shows the browser chrome, which fires window resize).
+  // We restore by running fromDataURL after a short delay so the library's
+  // own resizeCanvas() always runs first.
+  useEffect(() => {
+    if (tab !== "draw") return;
+    const handleResize = () => {
+      if (!savedSigRef.current || !sigCanvasRef.current) return;
+      setTimeout(() => {
+        if (savedSigRef.current && sigCanvasRef.current) {
+          sigCanvasRef.current.fromDataURL(savedSigRef.current);
+        }
+      }, 50);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [tab]);
+
   const handleRetake = () => {
     setSignatureImage("");
     setError("");
     setHint("");
     setHasDrawn(false);
+    savedSigRef.current = "";
     sigCanvasRef.current?.clear();
   };
 
@@ -272,7 +292,12 @@ export default function SignatureStep({
                   <SignatureCanvas
                     ref={sigCanvasRef}
                     penColor="#1e293b"
-                    onEnd={() => setHasDrawn(true)}
+                    onEnd={() => {
+                      setHasDrawn(true);
+                      if (sigCanvasRef.current) {
+                        savedSigRef.current = sigCanvasRef.current.toDataURL();
+                      }
+                    }}
                     canvasProps={{
                       className: "w-full bg-white",
                       style: { height: 180, display: "block" },
@@ -280,7 +305,7 @@ export default function SignatureStep({
                   />
                 </div>
                 <button
-                  onClick={() => { sigCanvasRef.current?.clear(); setError(""); }}
+                  onClick={() => { sigCanvasRef.current?.clear(); savedSigRef.current = ""; setHasDrawn(false); setError(""); }}
                   className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 transition-colors"
                 >
                   {t("sig_draw_clear")}

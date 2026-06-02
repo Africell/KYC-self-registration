@@ -119,7 +119,7 @@ export default function OCRStep({
     return {};
   });
   const [submitted, setSubmitted] = useState(false);
-  const [showRaw, setShowRaw] = useState(false);
+  // const [showRaw, setShowRaw] = useState(false);
 
   useEffect(() => {
     const raw = String(fields.Gender ?? "").trim();
@@ -148,18 +148,18 @@ export default function OCRStep({
     void runFaceMatch();
   }
 
-  const mrzColor =
-    mrzValid === null
-      ? "text-slate-400"
-      : mrzValid
-        ? "text-emerald-400"
-        : "text-amber-400";
-  const mrzLabel =
-    mrzValid === null
-      ? t("ocr_mrz_na")
-      : mrzValid
-        ? t("ocr_mrz_valid")
-        : t("ocr_mrz_invalid");
+  // const mrzColor =
+  //   mrzValid === null
+  //     ? "text-slate-400"
+  //     : mrzValid
+  //       ? "text-emerald-400"
+  //       : "text-amber-400";
+  // const mrzLabel =
+  //   mrzValid === null
+  //     ? t("ocr_mrz_na")
+  //     : mrzValid
+  //       ? t("ocr_mrz_valid")
+  //       : t("ocr_mrz_invalid");
 
   return (
     <section className="space-y-5">
@@ -248,7 +248,7 @@ export default function OCRStep({
       </div>
 
       {/* MRZ/OCR status */}
-      <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/40 px-4 py-3">
+      {/* <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/40 px-4 py-3">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-slate-400">
             {docType === "national_id"
@@ -268,10 +268,10 @@ export default function OCRStep({
         >
           {showRaw ? t("ocr_hide") : t("ocr_show")} {t("ocr_raw_suffix")}
         </button>
-      </div>
+      </div> */}
 
       {/* Collapsible raw panels */}
-      {showRaw && (
+      {/* {showRaw && (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -290,7 +290,7 @@ export default function OCRStep({
             </pre>
           </div>
         </div>
-      )}
+      )} */}
 
       {submitted && hasErrors && (
         <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">

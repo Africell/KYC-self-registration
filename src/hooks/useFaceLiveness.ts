@@ -9,7 +9,7 @@ import type { LandmarkStatus, LivenessChallenge } from "../types/kyc";
 import {
   computeFaceQuality,
   computeYawFromLandmarks,
-  computeFaceSizeRatio,
+  // computeFaceSizeRatio,
 } from "../lib/services/face.service";
 import { waitForVideoReady } from "../lib/services/video.service";
 import { playSuccessBeep } from "../utils/audio";
@@ -51,8 +51,8 @@ const PASS_STREAK_REQUIRED = 2;
 // const NOD_WINDOW          = 5;
 // const NOD_PITCH_THRESHOLD = 0.028;
 
-const CLOSER_DELTA = 0.08;
-const CLOSER_MIN_RATIO = 0.28;
+// const CLOSER_DELTA = 0.08;
+// const CLOSER_MIN_RATIO = 0.28;
 
 
 const INITIAL_LANDMARK_STATUS: LandmarkStatus = {
@@ -515,23 +515,23 @@ export function useFaceLiveness({
       let framePass = false;
 
       switch (currentChallenge) {
-        case "center":
-          framePass = Math.abs(yaw) < 0.1 && qualityOk;
-          if (framePass) {
-            hint =
-              passStreakRef.current > 0
-                ? t("hint_center_holding", {
-                    current: passStreakRef.current + 1,
-                    required: PASS_STREAK_REQUIRED,
-                  })
-                : t("hint_center_hold");
-          } else {
-            hint =
-              Math.abs(yaw) >= 0.1
-                ? t("hint_look_camera")
-                : t("hint_checking_quality");
-          }
-          break;
+        // case "center":
+        //   framePass = Math.abs(yaw) < 0.1 && qualityOk;
+        //   if (framePass) {
+        //     hint =
+        //       passStreakRef.current > 0
+        //         ? t("hint_center_holding", {
+        //             current: passStreakRef.current + 1,
+        //             required: PASS_STREAK_REQUIRED,
+        //           })
+        //         : t("hint_center_hold");
+        //   } else {
+        //     hint =
+        //       Math.abs(yaw) >= 0.1
+        //         ? t("hint_look_camera")
+        //         : t("hint_checking_quality");
+        //   }
+        //   break;
 
         case "lookLeft": {
           const pct = Math.min(
@@ -567,27 +567,27 @@ export function useFaceLiveness({
           break;
         }
 
-        case "moveCloser": {
-          const ratio = computeFaceSizeRatio(
-            detection,
-            video.videoWidth || 720,
-          );
-          if (moveCloserBaselineRef.current === null) {
-            moveCloserBaselineRef.current = ratio;
-          }
-          const movedBy = ratio - moveCloserBaselineRef.current;
-          const progressPct = Math.min(
-            100,
-            Math.round((movedBy / CLOSER_DELTA) * 100),
-          );
-          framePass = movedBy >= CLOSER_DELTA && ratio >= CLOSER_MIN_RATIO;
-          hint = framePass
-            ? t("hint_closer_hold")
-            : progressPct > 40
-              ? t("hint_closer_progress", { pct: progressPct })
-              : t("hint_closer");
-          break;
-        }
+        // case "moveCloser": {
+        //   const ratio = computeFaceSizeRatio(
+        //     detection,
+        //     video.videoWidth || 720,
+        //   );
+        //   if (moveCloserBaselineRef.current === null) {
+        //     moveCloserBaselineRef.current = ratio;
+        //   }
+        //   const movedBy = ratio - moveCloserBaselineRef.current;
+        //   const progressPct = Math.min(
+        //     100,
+        //     Math.round((movedBy / CLOSER_DELTA) * 100),
+        //   );
+        //   framePass = movedBy >= CLOSER_DELTA && ratio >= CLOSER_MIN_RATIO;
+        //   hint = framePass
+        //     ? t("hint_closer_hold")
+        //     : progressPct > 40
+        //       ? t("hint_closer_progress", { pct: progressPct })
+        //       : t("hint_closer");
+        //   break;
+        // }
 
         case "raiseLeftHand":
           if (gestureFrame && isRaisingLeftHand(gestureFrame.pose)) {

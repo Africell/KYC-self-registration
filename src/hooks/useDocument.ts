@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { flushSync } from "react-dom";
 import type { RefObject } from "react";
 import Webcam from "react-webcam";
 
@@ -161,8 +160,8 @@ export function useDocument({
   const processFile = useCallback(
     async (side: DocumentSide, file: File): Promise<void> => {
       const errorScope = side === "front" ? "document" : "document-back";
-      flushSync(() => setUploading(side, true));
       try {
+        setUploading(side, true);
         clearError();
 
         if (file.size > 10 * 1024 * 1024) {

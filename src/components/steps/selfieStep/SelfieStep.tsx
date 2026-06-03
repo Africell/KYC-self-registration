@@ -1,6 +1,7 @@
 // src/components/steps/selfie/SelfieStep.tsx
 
 import Webcam from "react-webcam";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { LivenessPhase } from "../../../hooks/useFaceLiveness";
@@ -67,6 +68,7 @@ export default function SelfieStep({
   captureStatus,
 }: SelfieStepProps) {
   const { t } = useTranslation();
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const currentConfig = CHALLENGE_CONFIGS[livenessChallenge];
   const ChallengeIcon = currentConfig.icon;
   const {
@@ -229,8 +231,33 @@ export default function SelfieStep({
             mirrored
             screenshotFormat="image/jpeg"
             videoConstraints={videoConstraints}
+            onUserMediaError={(e) => {
+              const msg = e instanceof DOMException ? e.name : String(e);
+              console.error("[Webcam] camera error:", e);
+              setCameraError(msg);
+            }}
             className="absolute inset-0 w-full h-full object-cover"
           />
+
+          {cameraError && (
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 gap-3 px-6 text-center rounded-2xl">
+              <Camera size={40} className="text-red-400" />
+              <p className="text-white font-semibold text-base">Camera unavailable</p>
+              <p className="text-slate-300 text-sm max-w-xs">
+                {cameraError === "NotReadableError"
+                  ? "The camera is in use by another app (Teams, Zoom, etc.). Close it and reload."
+                  : cameraError === "NotAllowedError"
+                    ? "Camera permission was denied. Allow access in your browser settings and reload."
+                    : `Camera error: ${cameraError}. Reload and try again.`}
+              </p>
+              <button
+                onClick={() => { setCameraError(null); window.location.reload(); }}
+                className="mt-1 rounded-2xl bg-slate-700 px-6 py-2 text-sm text-white hover:bg-slate-600 transition-colors"
+              >
+                Reload
+              </button>
+            </div>
+          )}
 
           <CaptureFlash active={flashActive} />
 
@@ -339,7 +366,7 @@ export default function SelfieStep({
                     />
                   </div>
                 )}
-                {livenessChallenge === "moveCloser" && landmarkStatus.hint.includes("%") && (
+                {/* {livenessChallenge === "moveCloser" && landmarkStatus.hint.includes("%") && (
                   <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-cyan-400 transition-all duration-150"
@@ -351,7 +378,7 @@ export default function SelfieStep({
                       }}
                     />
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           )}

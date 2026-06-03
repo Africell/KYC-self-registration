@@ -19,13 +19,13 @@ export type AppError = {
 };
 
 export type LivenessChallenge =
-  | "center"
+  // | "center"
   | "lookLeft"
   | "lookRight"
   | "raiseLeftHand"
   | "raiseRightHand"
   // | "nodHead"
-  | "moveCloser";
+  // | "moveCloser";
 
 import type { LucideIcon } from "lucide-react";
 

@@ -139,13 +139,13 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
                   </div>
                 ))}
               </div>
-              <div className="space-y-1">
+              {/* <div className="space-y-1">
                 {[debugCrops.selfieBox, debugCrops.docBox].map((info) => (
                   <div key={info} className={`rounded-lg px-3 py-2 text-xs font-mono ${info.includes("❌") ? "bg-red-950 text-red-300" : "bg-slate-900 text-emerald-300"}`}>
                     {info}
                   </div>
                 ))}
-              </div>
+              </div> */}
             </>
           )}
         </div>
@@ -182,7 +182,7 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
+          {/* <div className="flex gap-2">
             {[
               { labelKey: "match_doc_aligned",   ok: faceMatch.doc_mp_aligned },
               { labelKey: "match_photo_aligned", ok: faceMatch.photo_mp_aligned },
@@ -191,7 +191,7 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
                 {ok ? "✓" : "✗"} {t(labelKey)}
               </span>
             ))}
-          </div>
+          </div> */}
         </div>
       ) : (
         <div className="rounded-2xl border border-slate-700 bg-slate-900/60 px-4 py-6 text-center text-sm text-slate-500">

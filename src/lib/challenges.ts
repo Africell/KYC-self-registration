@@ -10,14 +10,14 @@ import type { ChallengeConfig, LivenessChallenge } from "../types/kyc";
 export const TURN_YAW_TARGET = 0.18;
 
 export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
-  center: {
-    id: "center",
-    label: "challenge_center_label",
-    instruction: "challenge_center_instruction",
-    icon: Crosshair,
-    requiresHand: false,
-    requiresPose: false,
-  },
+  // center: {
+  //   id: "center",
+  //   label: "challenge_center_label",
+  //   instruction: "challenge_center_instruction",
+  //   icon: Crosshair,
+  //   requiresHand: false,
+  //   requiresPose: false,
+  // },
   lookLeft: {
     id: "lookLeft",
     label: "challenge_lookLeft_label",
@@ -58,14 +58,14 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
   //   requiresHand: false,
   //   requiresPose: true,
   // },
-  moveCloser: {
-    id: "moveCloser",
-    label: "challenge_moveCloser_label",
-    instruction: "challenge_moveCloser_instruction",
-    icon: ZoomIn,
-    requiresHand: false,
-    requiresPose: false,
-  },
+  // moveCloser: {
+  //   id: "moveCloser",
+  //   label: "challenge_moveCloser_label",
+  //   instruction: "challenge_moveCloser_instruction",
+  //   icon: ZoomIn,
+  //   requiresHand: false,
+  //   requiresPose: false,
+  // },
 };
 
 /**
@@ -81,8 +81,8 @@ export function buildChallengeSequence(
   count = 3,
   previousSequence?: LivenessChallenge[],
 ): LivenessChallenge[] {
-  const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "moveCloser", "raiseLeftHand", "raiseRightHand"];
-  const needed = Math.max(1, count - 1);
+  const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "raiseLeftHand", "raiseRightHand"];
+  const needed = Math.max(1, count);
 
   let picked: LivenessChallenge[];
   let attempts = 0;
@@ -95,8 +95,8 @@ export function buildChallengeSequence(
     attempts < 20 &&
     previousSequence &&
     previousSequence.length > 1 &&
-    JSON.stringify(["center", ...picked]) === JSON.stringify(previousSequence)
+    JSON.stringify(picked) === JSON.stringify(previousSequence)
   );
-
-  return ["center", ...picked];
+//return ["center", ...picked];
+  return picked;
 }

@@ -91,7 +91,26 @@ export default function MSISDNStep({
         setError("captcha", t("msisdn_error_captcha"));
         return null;
       }
-      return executeRecaptcha(action);
+
+      // BROWSER_ERROR is a transient client-side failure (script load timing,
+      // brief network blip). Google recommends retrying execute() in this case.
+      const MAX_ATTEMPTS = 3;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        try {
+          return await executeRecaptcha(action);
+        } catch (err) {
+          const isBrowserError =
+            err instanceof Error && err.message.includes("BROWSER_ERROR");
+          if (!isBrowserError || attempt === MAX_ATTEMPTS - 1) {
+            setError("captcha", t("msisdn_error_captcha"));
+            return null;
+          }
+          await new Promise((res) => setTimeout(res, 500 * (attempt + 1)));
+        }
+      }
+
+      setError("captcha", t("msisdn_error_captcha"));
+      return null;
     },
     [executeRecaptcha, setError, t],
   );

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import i18next from "i18next";
 import type { RefObject } from "react";
 import Webcam from "react-webcam";
 
@@ -167,7 +168,7 @@ export function useDocument({
         if (file.size > 10 * 1024 * 1024) {
           pushError(
             errorScope,
-            "File size exceeds 10 MB. Please upload a smaller image.",
+            i18next.t("doc_error_size"),
           );
           return;
         }
@@ -192,7 +193,7 @@ export function useDocument({
                   errorScope,
                   result?.Data?.reason ??
                     resolveApiError(
-                      result?.ErrorKey,
+                     
                       result?.StatusDescription ??
                         "Document validation failed. Please retake the photo.",
                     ),

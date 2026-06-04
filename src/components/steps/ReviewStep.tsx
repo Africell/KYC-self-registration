@@ -59,7 +59,7 @@ export default function ReviewStep({ internalPayload, backendPayload, prevStep, 
       if (axios.isAxiosError(err)) {
         const body = err.response?.data;
         console.log("what is body", body);
-        const message = resolveApiError(body?.ErrorKey ?? body?.StatusDescription, err.message || t("review_error_unexpected"));
+        const message = resolveApiError( body?.StatusDescription, err.message || t("review_error_unexpected"));
         setSubmitState({ status: "error", message });
       } else {
         setSubmitState({ status: "error", message: err instanceof Error ? err.message : t("review_error_unexpected") });

@@ -361,7 +361,9 @@ export async function apiFaceMatch(
   });
 
   if (data.StatusCode !== 200 || data.Status !== "successful" || !data.Data) {
-    throw new Error(resolveApiError(data.ErrorKey, data.StatusDescription ?? "Face match failed."));
+    throw new Error(
+      resolveApiError(data?.StatusDescription, "Face match failed."),
+    );
   }
 
   return data.Data;

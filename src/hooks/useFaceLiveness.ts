@@ -23,7 +23,7 @@ import {
   // computePitchFromPose,
   detectGestures,
   isRaisingLeftHand,
-  isRaisingRightHand,
+  // isRaisingRightHand,
 } from "../lib/services/gesture.service";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ const INITIAL_LANDMARK_STATUS: LandmarkStatus = {
 
 const POSE_CHALLENGES = new Set<LivenessChallenge>([
   "raiseLeftHand",
-  "raiseRightHand",
+  // "raiseRightHand",
   // "nodHead",
 ]);
 
@@ -344,8 +344,8 @@ export function useFaceLiveness({
 
   // ── Retry after timeout ────────────────────────────────────────────────────
   const retryChallenge = useCallback(() => {
-    applyReset(buildChallengeSequence(challengeCount, challengeSequence));
-  }, [applyReset, challengeCount, challengeSequence]);
+    applyReset(buildChallengeSequence(challengeCount));
+  }, [applyReset, challengeCount]);
 
   // ── Side-capture yaw tracking (post-liveness) ──────────────────────────────
   const analyzeForSideCapture = useCallback(async (): Promise<void> => {
@@ -596,12 +596,12 @@ export function useFaceLiveness({
           }
           break;
 
-        case "raiseRightHand":
-          if (gestureFrame && isRaisingRightHand(gestureFrame.pose)) {
-            framePass = true;
-            hint = t("hint_right_hand_raised");
-          }
-          break;
+        // case "raiseRightHand":
+        //   if (gestureFrame && isRaisingRightHand(gestureFrame.pose)) {
+        //     framePass = true;
+        //     hint = t("hint_right_hand_raised");
+        //   }
+        //   break;
 
         // case "nodHead":
         //   if (gestureFrame) {

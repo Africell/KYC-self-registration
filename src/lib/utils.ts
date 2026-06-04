@@ -8,7 +8,7 @@ export function resolveApiError(
   if (!errorKey) return fallback ?? (i18n.t("api_error_generic") as string);
   const translated = i18n.t(errorKey, { defaultValue: "" }) as string;
   if (translated) return translated;
-  return fallback ?? (i18n.t("api_error_generic") as string);
+  return errorKey;
 }
 
 export function cx(...parts: Array<string | false | null | undefined>): string {

@@ -227,6 +227,7 @@ const en = {
     "Upload a clear photo of your handwritten signature on a white background. Accepted formats: JPG, PNG · max {{max}} MB.",
   sig_error_type: "Only JPG or PNG files are accepted.",
   sig_error_size: "File must be under {{max}} MB.",
+  doc_error_size: "File size exceeds 10 MB. Please upload a smaller image.",
   sig_hint_small: "Image looks very small — make sure the signature is legible.",
   sig_captured: "✓ Signature captured",
   sig_retake: "Retake / replace",
@@ -577,6 +578,7 @@ const fr: typeof en = {
     "Téléchargez une photo claire de votre signature manuscrite sur fond blanc. Formats acceptés : JPG, PNG · max {{max}} Mo.",
   sig_error_type: "Seuls les fichiers JPG ou PNG sont acceptés.",
   sig_error_size: "Le fichier doit faire moins de {{max}} Mo.",
+  doc_error_size: "La taille du fichier dépasse 10 Mo. Veuillez télécharger une image plus petite.",
   sig_hint_small:
     "L'image semble très petite — assurez-vous que la signature est lisible.",
   sig_captured: "✓ Signature capturée",

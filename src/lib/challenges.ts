@@ -42,14 +42,14 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
     requiresHand: false,
     requiresPose: true,
   },
-  raiseRightHand: {
-    id: "raiseRightHand",
-    label: "challenge_raiseRightHand_label",
-    instruction: "challenge_raiseRightHand_instruction",
-    icon: Hand,
-    requiresHand: false,
-    requiresPose: true,
-  },
+  // raiseRightHand: {
+  //   id: "raiseRightHand",
+  //   label: "challenge_raiseRightHand_label",
+  //   instruction: "challenge_raiseRightHand_instruction",
+  //   icon: Hand,
+  //   requiresHand: false,
+  //   requiresPose: true,
+  // },
   // nodHead: {
   //   id: "nodHead",
   //   label: "challenge_nodHead_label",
@@ -79,24 +79,11 @@ export const CHALLENGE_CONFIGS: Record<LivenessChallenge, ChallengeConfig> = {
  */
 export function buildChallengeSequence(
   count = 3,
-  previousSequence?: LivenessChallenge[],
 ): LivenessChallenge[] {
-  const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "raiseLeftHand", "raiseRightHand"];
+  const pool: LivenessChallenge[] = ["lookLeft", "lookRight", "raiseLeftHand"];
   const needed = Math.max(1, count);
 
-  let picked: LivenessChallenge[];
-  let attempts = 0;
-
-  do {
-    const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    picked = shuffled.slice(0, needed);
-    attempts++;
-  } while (
-    attempts < 20 &&
-    previousSequence &&
-    previousSequence.length > 1 &&
-    JSON.stringify(picked) === JSON.stringify(previousSequence)
-  );
+  const picked = pool.slice(0, needed);
 //return ["center", ...picked];
   return picked;
 }

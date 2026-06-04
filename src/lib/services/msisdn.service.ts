@@ -121,10 +121,13 @@ export async function generateOTP(
 ): Promise<number> {
   const normalized = normalizeMSISDN(msisdn);
   const data = await apiGenerateOTP(normalized, captchaToken);
-
+  console.log("dataa", data);
   if (data.StatusCode !== 200 || data.Status !== "successful") {
     throw new Error(
-      resolveApiError(data.ErrorKey ?? data.StatusDescription, "Failed to send verification code."),
+      resolveApiError(
+         data?.StatusDescription,
+        "Failed to send verification code.",
+      ),
     );
   }
 
@@ -222,7 +225,7 @@ export async function verifyOTP(
   }
 
   // ── Failure — read AttemptsRemaining from response body ──────────────────
-  const desc = resolveApiError(data.ErrorKey ?? data.StatusDescription);
+  const desc = resolveApiError( data.StatusDescription);
   const attemptsRemaining = hasAttempts
     ? (data.Data as { AttemptsRemaining: number }).AttemptsRemaining
     : undefined;

@@ -324,7 +324,7 @@ export default function App(): JSX.Element {
     }
     const response = await apiSubmitSIMRegistration(backendPayload, token);
     if (response.StatusCode !== 200 || response.Status !== "successful") {
-      throw new Error(resolveApiError(response.ErrorKey ?? response.StatusDescription, "Submission failed. Please try again."));
+      throw new Error(resolveApiError( response?.StatusDescription, "Submission failed. Please try again."));
     }
     clearSession();
     clearOTP();

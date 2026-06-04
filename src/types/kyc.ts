@@ -23,7 +23,7 @@ export type LivenessChallenge =
   | "lookLeft"
   | "lookRight"
   | "raiseLeftHand"
-  | "raiseRightHand"
+  // | "raiseRightHand"
   // | "nodHead"
   // | "moveCloser";
 

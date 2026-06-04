@@ -10,6 +10,7 @@ import {
   apiValidateDocumentFromOCR,
 } from "../lib/api/kyc.api";
 import { getStoredToken } from "../lib/services/msisdn.service";
+import { resolveApiError } from "../lib/utils";
 import {
   fileToDataUrl,
   dataUrlToImage,
@@ -87,9 +88,8 @@ export function useDocument({
   const [documentBackImage, setDocumentBackImage] = useState("");
   const [documentBackQuality, setDocumentBackQuality] =
     useState<DocumentQuality | null>(null);
-  const [documentPreviewMode, setDocumentPreviewMode] = useState<
-    "upload"
-  >("upload");
+  const [documentPreviewMode, setDocumentPreviewMode] =
+    useState<"upload">("upload");
   const [documentUploading, setDocumentUploading] = useState(false);
   const [documentBackUploading, setDocumentBackUploading] = useState(false);
   const [documentOriginalImage, setDocumentOriginalImage] = useState("");
@@ -191,7 +191,11 @@ export function useDocument({
                 pushError(
                   errorScope,
                   result?.Data?.reason ??
-                    "Document validation failed. Please retake the photo.",
+                    resolveApiError(
+                      result?.ErrorKey,
+                      result?.StatusDescription ??
+                        "Document validation failed. Please retake the photo.",
+                    ),
                 );
                 return;
               }
@@ -199,7 +203,10 @@ export function useDocument({
                 setDocumentOriginalImage(dataUrl);
                 finalUrl = `data:image/jpeg;base64,${result.Data.cropped_image}`;
               } else {
-                finalUrl = await compressBase64Image(dataUrl, COMPRESS_DOCUMENT);
+                finalUrl = await compressBase64Image(
+                  dataUrl,
+                  COMPRESS_DOCUMENT,
+                );
               }
             } catch {
               // Validation is best-effort; compress locally as fallback

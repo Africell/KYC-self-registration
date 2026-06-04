@@ -37,6 +37,7 @@ import ReviewStep from "./components/steps/ReviewStep";
 import { LanguageSwitcher } from "./components/layout/LanguageSwitcher";
 
 import { apiSubmitSIMRegistration } from "./lib/api/kyc.api";
+import { resolveApiError } from "./lib/utils";
 import { getStoredToken, clearOTP } from "./lib/services/msisdn.service";
 import { transformToBackendPayload } from "./utils/image";
 import type { SessionPatch } from "./lib/services/session.service";
@@ -323,7 +324,7 @@ export default function App(): JSX.Element {
     }
     const response = await apiSubmitSIMRegistration(backendPayload, token);
     if (response.StatusCode !== 200 || response.Status !== "successful") {
-      throw new Error(response.StatusDescription || "Submission failed. Please try again.");
+      throw new Error(resolveApiError(response.ErrorKey ?? response.StatusDescription, "Submission failed. Please try again."));
     }
     clearSession();
     clearOTP();

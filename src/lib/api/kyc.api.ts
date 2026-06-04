@@ -1,6 +1,8 @@
 // src/lib/api/kyc.api.ts
 
 import axios from "axios";
+import i18n from "../../assets/i18n";
+import { resolveApiError } from "../utils";
 import { ENV } from "../config/env";
 
 const kycApi = axios.create({
@@ -9,12 +11,18 @@ const kycApi = axios.create({
   validateStatus: () => true,
 });
 
+kycApi.interceptors.request.use((config) => {
+  config.headers["Accept-Language"] = i18n.language;
+  return config;
+});
+
 // ── Response types ────────────────────────────────────────────────────────────
 
 export interface GenerateOTPResponse {
   Status: string;
   StatusCode: number;
   StatusDescription: string;
+  ErrorKey?: string;
   StatusDate: string;
   Data: {
     MSISDN: string;
@@ -27,6 +35,7 @@ export interface ValidateOTPResponse {
   Status: string;
   StatusCode: number;
   StatusDescription: string;
+  ErrorKey?: string;
   StatusDate: string;
   Data:
     | { Token: { TokenType: string; TokenValidity: number; Token: string } }
@@ -64,6 +73,7 @@ export interface SIMRegistrationResponse {
   Status: string;
   StatusCode: number;
   StatusDescription: string;
+  ErrorKey?: string;
   Data: null | object;
 }
 
@@ -271,6 +281,7 @@ export interface ValidateDocumentTypeResponse {
   Status: string;
   StatusCode: number;
   StatusDescription: string;
+  ErrorKey?: string;
   Data: {
     confidence: number;
     cropped_image: string | null;
@@ -340,7 +351,6 @@ export async function apiFaceMatch(
   form.append("document", dataUrlToFile(documentDataUrl, "document.jpg"));
   form.append("selfie", dataUrlToFile(selfieDataUrl, "selfie.jpg"));
   form.append("selfie_pre_cropped", String(selfieCropped));
-  console.log("String(selfieCropped)", String(selfieCropped));
   const { data } = await kycApi.post("/HTTP_FaceMatching/", form, {
     headers: {
       "Content-Type": undefined,
@@ -349,6 +359,10 @@ export async function apiFaceMatch(
       SourceApp: "FCDM_App",
     },
   });
-  console.log("data for fac match", data?.Data);
+
+  if (data.StatusCode !== 200 || data.Status !== "successful" || !data.Data) {
+    throw new Error(resolveApiError(data.ErrorKey, data.StatusDescription ?? "Face match failed."));
+  }
+
   return data.Data;
 }

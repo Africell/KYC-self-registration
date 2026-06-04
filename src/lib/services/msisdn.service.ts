@@ -4,6 +4,7 @@ import registeredUsers from "../../mock/registeredUsers.json";
 import { apiGenerateOTP, apiValidateOTP } from "../api/kyc.api";
 import { clearOTPTokenFromStorage, createSession } from "./session.service";
 import { STORAGE_KEYS, OTP_MAX_ATTEMPTS } from "../constants/kyc.constants";
+import { resolveApiError } from "../utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ export async function generateOTP(
 
   if (data.StatusCode !== 200 || data.Status !== "successful") {
     throw new Error(
-      data.StatusDescription ?? "Failed to send verification code.",
+      resolveApiError(data.ErrorKey ?? data.StatusDescription, "Failed to send verification code."),
     );
   }
 
@@ -221,7 +222,7 @@ export async function verifyOTP(
   }
 
   // ── Failure — read AttemptsRemaining from response body ──────────────────
-  const desc = data.StatusDescription ?? "";
+  const desc = resolveApiError(data.ErrorKey ?? data.StatusDescription);
   const attemptsRemaining = hasAttempts
     ? (data.Data as { AttemptsRemaining: number }).AttemptsRemaining
     : undefined;

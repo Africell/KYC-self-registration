@@ -1,4 +1,15 @@
 import type { ExtractedFields } from "../types/kyc";
+import i18n from "../assets/i18n";
+
+export function resolveApiError(
+  errorKey?: string | null,
+  fallback?: string,
+): string {
+  if (!errorKey) return fallback ?? (i18n.t("api_error_generic") as string);
+  const translated = i18n.t(errorKey, { defaultValue: "" }) as string;
+  if (translated) return translated;
+  return fallback ?? (i18n.t("api_error_generic") as string);
+}
 
 export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");

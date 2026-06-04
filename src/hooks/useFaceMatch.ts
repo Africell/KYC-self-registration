@@ -71,9 +71,7 @@ export function useFaceMatch({
     } catch (err) {
       pushError(
         "face-match",
-        err instanceof Error
-          ? `${err.message} Ensure both images contain one clear face.`
-          : "Face match failed.",
+        err instanceof Error ? err.message : "Face match failed.",
       );
     } finally {
       setBusy(false);

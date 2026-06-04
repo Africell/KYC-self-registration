@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { SubmissionPayload } from "../../types/kyc";
 import { truncateDeep } from "../../utils/image";
 import { apiSubmitSIMRegistration, type SIMRegistrationPayload } from "../../lib/api/kyc.api";
+import { resolveApiError } from "../../lib/utils";
 import axios from "axios";
 
 const TOKEN_STORAGE_KEY = "kyc_otp_token";
@@ -58,7 +59,7 @@ export default function ReviewStep({ internalPayload, backendPayload, prevStep, 
       if (axios.isAxiosError(err)) {
         const body = err.response?.data;
         console.log("what is body", body);
-        const message = body?.ErrorDescription || body?.StatusDescription || err.message || t("review_error_unexpected");
+        const message = resolveApiError(body?.ErrorKey ?? body?.StatusDescription, err.message || t("review_error_unexpected"));
         setSubmitState({ status: "error", message });
       } else {
         setSubmitState({ status: "error", message: err instanceof Error ? err.message : t("review_error_unexpected") });

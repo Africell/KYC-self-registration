@@ -5,7 +5,7 @@ import { getStoredToken } from "../lib/services/msisdn.service";
 import { initialFields } from "../lib/constants/kyc.constants";
 import type { ExtractedFields } from "../types/kyc";
 import type { KYCSession } from "../lib/services/session.service";
-import { formatDate } from "../lib/utils";
+import { formatDate, resolveApiError } from "../lib/utils";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -291,7 +291,7 @@ export function useOCR({
 
         if (response.StatusCode !== 200 || !response.Data) {
           throw new Error(
-            response.StatusDescription || `OCR API returned status ${response.StatusCode}`,
+            resolveApiError(response.ErrorKey ?? response.StatusDescription, `OCR API returned status ${response.StatusCode}`),
           );
         }
 
@@ -323,7 +323,7 @@ export function useOCR({
 
         if (response.StatusCode !== 200 || !response.Data) {
           throw new Error(
-            response.StatusDescription || `OCR API returned status ${response.StatusCode}`,
+            resolveApiError(response.ErrorKey ?? response.StatusDescription, `OCR API returned status ${response.StatusCode}`),
           );
         }
 

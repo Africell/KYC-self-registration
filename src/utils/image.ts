@@ -161,5 +161,9 @@ export function transformToBackendPayload(
     IdDocFontPhoto_b64: payload.images.IdDocFontPhoto_b64 || "",
     IdDocRearPhoto_b64: payload.images.IdDocRearPhoto_b64 || "",
     SignaturePhoto_b64: payload.signatureImage || "",
+
+    FaceMatchSimilarity: payload.faceMatch?.similarity ?? 0,
+    FaceMatchConfidence: payload.faceMatch?.confidence_level ?? "",
+    FaceMatchThreshold: payload.faceMatch?.threshold ?? 0,
   };
 }

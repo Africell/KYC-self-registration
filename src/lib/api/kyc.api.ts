@@ -67,6 +67,9 @@ export interface SIMRegistrationPayload {
   MSISDNType: string;
   MSISDN: string;
   MobileMoney_Registration: boolean;
+  FaceMatchSimilarity: number;
+  FaceMatchConfidence: string;
+  FaceMatchThreshold: number;
 }
 
 export interface SIMRegistrationResponse {

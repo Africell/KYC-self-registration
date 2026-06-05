@@ -102,10 +102,10 @@ const en = {
   selfie_photo_guide: "Photo guide",
   selfie_front_photo: "Front Photo",
   selfie_front_desc:
-    "Face the camera directly. Auto-capture begins when your face quality is good.",
+    "Face the camera directly.",
   selfie_side_photo: "Side Photo",
   selfie_side_desc:
-    "Slowly turn your head right. It captures automatically when the angle is good.",
+    "Slowly turn your head right.",
   selfie_turn_angle: "Turn angle",
   selfie_captured: "Captured",
   selfie_front_label: "Front",
@@ -456,10 +456,10 @@ const fr: typeof en = {
   selfie_photo_guide: "Guide photo",
   selfie_front_photo: "Photo frontale",
   selfie_front_desc:
-    "Faites face à la caméra. La capture automatique commence quand la qualité est bonne.",
+    "Faites face à la caméra.",
   selfie_side_photo: "Photo de profil",
   selfie_side_desc:
-    "Tournez lentement la tête à droite. La capture se fait automatiquement quand l'angle est bon.",
+    "Tournez lentement la tête à droite.",
   selfie_turn_angle: "Angle de rotation",
   selfie_captured: "Capturé",
   selfie_front_label: "Face",

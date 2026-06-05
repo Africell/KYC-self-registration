@@ -241,6 +241,7 @@ export function useFaceLiveness({
       pitchWindow.current = [];
       passStreakRef.current = 0;
       moveCloserBaselineRef.current = null;
+      isProcessingRef.current = false;
 
       setChallengeSequence(freshSequence);
       challengeSequenceRef.current = freshSequence;

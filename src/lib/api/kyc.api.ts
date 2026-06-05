@@ -75,6 +75,7 @@ export interface SIMRegistrationResponse {
   StatusDescription: string;
   ErrorKey?: string;
   Data: null | object;
+  ErrorDescription: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

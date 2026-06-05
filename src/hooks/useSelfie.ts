@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import Webcam from "react-webcam";
+import * as faceapi from "face-api.js";
 import { detectPossibleSpoof } from "../lib/services/spoof.service";
-import { getBestFaceDescriptor } from "../lib/services/face.service";
 import { dataUrlToImage } from "../utils/image";
 import { playSuccessBeep } from "../utils/audio";
 
@@ -158,7 +158,12 @@ export function useSelfie({
         return;
       }
 
-      await getBestFaceDescriptor(await dataUrlToImage(unmirrored));
+      const imgEl = await dataUrlToImage(unmirrored);
+      const facePresent = await faceapi.detectSingleFace(
+        imgEl,
+        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }),
+      );
+      if (!facePresent) throw new Error("No face detected. Please center your face and try again.");
 
       triggerFlash();
       playSuccessBeep();

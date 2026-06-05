@@ -143,12 +143,12 @@ export default function App(): JSX.Element {
     resetSelfie,
     setSelfieImage,
     setFaceSidePhoto,
+    startFrontCapture,
+    startSideCapture,
   } = useSelfie({
     webcamRef: selfieWebcamRef,
     livenessDone,
     yawEstimate: landmarkStatus.yawEstimate,
-    faceQualityOk: landmarkStatus.qualityOk,
-    faceDetected: landmarkStatus.faceDetected,
     pushError,
     clearError,
     nextStep,
@@ -423,6 +423,8 @@ export default function App(): JSX.Element {
                 }}
                 confirmPhotos={confirmPhotos}
                 captureStatus={captureStatus}
+                startFrontCapture={startFrontCapture}
+                startSideCapture={startSideCapture}
               />
             )}
 

@@ -41,6 +41,8 @@ interface SelfieStepProps {
   retakeSelfie: () => void;
   confirmPhotos: () => void;
   captureStatus: CaptureStatus;
+  startFrontCapture: () => void;
+  startSideCapture: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -66,6 +68,8 @@ export default function SelfieStep({
   retakeSelfie,
   confirmPhotos,
   captureStatus,
+  startFrontCapture,
+  startSideCapture,
 }: SelfieStepProps) {
   const { t } = useTranslation();
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -80,7 +84,7 @@ export default function SelfieStep({
 
   const isReviewPhase = capturePhase === "review" || capturePhase === "complete";
   const isSidePhase =
-    capturePhase === "side-guide" ||
+    capturePhase === "side-instruction" ||
     capturePhase === "side-ready" ||
     capturePhase === "side-captured";
   const isCapturePhase = capturePhase !== "idle";
@@ -184,11 +188,11 @@ export default function SelfieStep({
             )}
             {isCapturePhase && (
               <>
-                {capturePhase === "front-guide" && t("selfie_front_guide")}
+                {capturePhase === "front-instruction" && t("selfie_front_instruction_title")}
                 {capturePhase === "front-countdown" &&
                   t("selfie_front_countdown", { count: countdown })}
                 {capturePhase === "front-captured" && t("selfie_front_captured_phase")}
-                {capturePhase === "side-guide" && t("selfie_side_guide_phase")}
+                {capturePhase === "side-instruction" && t("selfie_side_instruction_title")}
                 {capturePhase === "side-ready" && t("selfie_side_ready_phase")}
                 {capturePhase === "side-captured" && t("selfie_complete")}
               </>
@@ -355,7 +359,7 @@ export default function SelfieStep({
                   <ChallengeIcon size={18} className="shrink-0" />
                   {t(currentConfig.label)}
                 </div>
-                {(livenessChallenge === "lookLeft" || livenessChallenge === "lookRight") && (
+                {/* {(livenessChallenge === "lookLeft" || livenessChallenge === "lookRight") && (
                   <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-150"
@@ -365,7 +369,7 @@ export default function SelfieStep({
                       }}
                     />
                   </div>
-                )}
+                )} */}
                 {/* {livenessChallenge === "moveCloser" && landmarkStatus.hint.includes("%") && (
                   <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-700/70 overflow-hidden">
                     <div
@@ -398,26 +402,42 @@ export default function SelfieStep({
             </div>
           )}
 
-          {/* FRONT-GUIDE: manual capture fallback */}
-          {capturePhase === "front-guide" && (
-            <div className="absolute inset-0 flex items-end justify-center pb-5 pointer-events-none">
-              <div className="pointer-events-auto">
+          {/* FRONT-INSTRUCTION: ready screen before auto-capture */}
+          {capturePhase === "front-instruction" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-end bg-transparent pb-6 gap-3">
+              <div className="bg-black/80 backdrop-blur-sm rounded-2xl px-5 py-4 sm:px-6 sm:py-5 flex flex-col items-center gap-3 mx-4 text-center w-full max-w-xs">
+                <p className="text-base sm:text-lg font-semibold text-white">
+                  {t("selfie_front_instruction_title")}
+                </p>
+                <p className="text-slate-300 text-xs sm:text-sm">
+                  {t("selfie_front_instruction_desc")}
+                </p>
                 <button
-                  onClick={() => void captureSelfie()}
-                  className="rounded-2xl bg-black/60 border border-slate-600 px-4 py-2 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-400 transition-colors backdrop-blur"
+                  onClick={startFrontCapture}
+                  className="w-full rounded-2xl bg-cyan-500 px-6 py-3 font-semibold text-slate-950 hover:bg-cyan-400 active:bg-cyan-300 transition-colors text-sm"
                 >
-                  {t("selfie_btn_manual")}
+                  {t("selfie_btn_ready")}
                 </button>
               </div>
             </div>
           )}
 
-          {/* SIDE-GUIDE: instruction nudge */}
-          {capturePhase === "side-guide" && (
-            <div className="absolute inset-0 flex items-end justify-center pb-5 pointer-events-none">
-              <div className="flex items-center gap-2 bg-black/60 backdrop-blur rounded-2xl px-4 py-2">
-                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-                <p className="text-xs text-slate-300">{t("selfie_side_turn_right")}</p>
+          {/* SIDE-INSTRUCTION: ready screen before side auto-capture */}
+          {capturePhase === "side-instruction" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-end bg-transparent pb-6 gap-3">
+              <div className="bg-black/80 backdrop-blur-sm rounded-2xl px-5 py-4 sm:px-6 sm:py-5 flex flex-col items-center gap-3 mx-4 text-center w-full max-w-xs">
+                <p className="text-base sm:text-lg font-semibold text-white">
+                  {t("selfie_side_instruction_title")}
+                </p>
+                <p className="text-slate-300 text-xs sm:text-sm">
+                  {t("selfie_side_instruction_desc")}
+                </p>
+                <button
+                  onClick={startSideCapture}
+                  className="w-full rounded-2xl bg-cyan-500 px-6 py-3 font-semibold text-slate-950 hover:bg-cyan-400 active:bg-cyan-300 transition-colors text-sm"
+                >
+                  {t("selfie_btn_ready")}
+                </button>
               </div>
             </div>
           )}
@@ -498,7 +518,7 @@ export default function SelfieStep({
 
               {/* Step 1 — Front */}
               <div className={`rounded-xl p-3 border transition-all ${
-                capturePhase === "front-guide" || capturePhase === "front-countdown"
+                capturePhase === "front-instruction" || capturePhase === "front-countdown"
                   ? "border-cyan-700 bg-cyan-950/40"
                   : capturePhase === "front-captured" || isSidePhase
                     ? "border-emerald-800/50 bg-emerald-950/30"
@@ -512,7 +532,7 @@ export default function SelfieStep({
                       <Check size={12} /> {t("selfie_done")}
                     </span>
                   )}
-                  {(capturePhase === "front-guide" || capturePhase === "front-countdown") && (
+                  {(capturePhase === "front-instruction" || capturePhase === "front-countdown") && (
                     <span className="ml-auto">
                       <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                     </span>
@@ -523,7 +543,7 @@ export default function SelfieStep({
 
               {/* Step 2 — Side */}
               <div className={`rounded-xl p-3 border transition-all ${
-                capturePhase === "side-guide" || capturePhase === "side-ready"
+                capturePhase === "side-instruction" || capturePhase === "side-ready"
                   ? "border-cyan-700 bg-cyan-950/40"
                   : capturePhase === "side-captured"
                     ? "border-emerald-800/50 bg-emerald-950/30"
@@ -537,28 +557,13 @@ export default function SelfieStep({
                       <Check size={12} /> {t("selfie_done")}
                     </span>
                   )}
-                  {(capturePhase === "side-guide" || capturePhase === "side-ready") && (
+                  {(capturePhase === "side-instruction" || capturePhase === "side-ready") && (
                     <span className="ml-auto">
                       <span className="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">{t("selfie_side_desc")}</p>
-
-                {(capturePhase === "side-guide" || capturePhase === "side-ready") && (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs text-slate-500 mb-1">
-                      <span>{t("selfie_turn_angle")}</span>
-                      <span>{Math.round(yawProgress * 100)}%</span>
-                    </div>
-                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-300 ${capturePhase === "side-ready" ? "bg-emerald-400" : "bg-cyan-400"}`}
-                        style={{ width: `${yawProgress * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -584,21 +589,12 @@ export default function SelfieStep({
           </button>
         )}
 
-        {(capturePhase === "side-guide" || capturePhase === "side-ready") && (
+        {capturePhase === "side-ready" && (
           <div className="flex items-center gap-2 rounded-2xl bg-slate-800/60 border border-slate-700 px-5 py-3 min-h-12 text-sm text-slate-400">
-            {capturePhase === "side-ready" ? (
-              <>
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                <span className="text-emerald-300 font-medium">
-                  {t("selfie_side_capturing_in", { count: countdown })}
-                </span>
-              </>
-            ) : (
-              <>
-                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-                <span>{t("selfie_side_turn_right")}</span>
-              </>
-            )}
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-emerald-300 font-medium">
+              {t("selfie_side_capturing_in", { count: countdown })}
+            </span>
           </div>
         )}
       </div>

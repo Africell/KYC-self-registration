@@ -12,10 +12,10 @@ import { playSuccessBeep } from "../utils/audio";
 
 export type CapturePhase =
   | "idle"
-  | "front-guide"
+  | "front-instruction"
   | "front-countdown"
   | "front-captured"
-  | "side-guide"
+  | "side-instruction"
   | "side-ready"
   | "side-captured"
   | "review"
@@ -32,8 +32,6 @@ interface UseSelfieProps {
   webcamRef: RefObject<Webcam | null>;
   livenessDone: boolean;
   yawEstimate: number;
-  faceQualityOk: boolean;
-  faceDetected: boolean;
   pushError: (scope: string, message: string) => void;
   clearError: () => void;
   nextStep: () => void;
@@ -48,17 +46,17 @@ interface UseSelfieReturn {
   confirmPhotos: () => void;
   resetSelfie: () => void;
   setSelfieImage: (v: string) => void;
-  setFaceSidePhoto: (v: string) => void;  // ← exposed for rehydration
+  setFaceSidePhoto: (v: string) => void;
+  startFrontCapture: () => void;
+  startSideCapture: () => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FRONT_COUNTDOWN_SEC  = 3;
-const FLASH_DURATION_MS    = 400;
-const SIDE_YAW_THRESHOLD   = 0.18;
-const SIDE_YAW_FULL        = 0.32;
-const SIDE_HOLD_SEC        = 3;    // seconds to hold angle before auto-capture
-const SIDE_YAW_CANCEL      = 0.10; // hysteresis: cancel countdown if drops below this
+const FRONT_COUNTDOWN_SEC = 3;
+const FLASH_DURATION_MS   = 400;
+const SIDE_YAW_FULL       = 0.32;
+const SIDE_HOLD_SEC       = 3;
 
 // ─── Helper: un-mirror webcam screenshot ──────────────────────────────────────
 
@@ -86,8 +84,6 @@ export function useSelfie({
   webcamRef,
   livenessDone,
   yawEstimate,
-  faceQualityOk,
-  faceDetected,
   pushError,
   clearError,
   nextStep,
@@ -99,26 +95,26 @@ export function useSelfie({
   const [countdown,    setCountdown]    = useState(FRONT_COUNTDOWN_SEC);
   const [flashActive,  setFlashActive]  = useState(false);
 
-  const capturePhaseRef    = useRef<CapturePhase>("idle");
-  const countdownRef       = useRef(FRONT_COUNTDOWN_SEC);
-  const countdownTimerRef  = useRef<number | null>(null);
-  const sideTimerRef       = useRef<number | null>(null);
-  const flashTimerRef      = useRef<number | null>(null);
+  const capturePhaseRef   = useRef<CapturePhase>("idle");
+  const countdownRef      = useRef(FRONT_COUNTDOWN_SEC);
+  const countdownTimerRef = useRef<number | null>(null);
+  const sideTimerRef      = useRef<number | null>(null);
+  const flashTimerRef     = useRef<number | null>(null);
 
   const setPhase = (p: CapturePhase) => {
     capturePhaseRef.current = p;
     setCapturePhase(p);
   };
 
-  // ── Transition to front-guide when liveness completes ─────────────────────
+  // ── Transition to front-instruction when liveness completes ──────────────
   useEffect(() => {
     if (livenessDone && capturePhase === "idle") {
-      setPhase("front-guide");
+      setPhase("front-instruction");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [livenessDone]);
 
-  // ── Yaw progress for side guide ────────────────────────────────────────────
+  // ── Yaw progress for side overlay ─────────────────────────────────────────
   const yawProgress = Math.min(1, Math.abs(yawEstimate) / SIDE_YAW_FULL);
 
   // ── Flash helper ───────────────────────────────────────────────────────────
@@ -158,7 +154,7 @@ export function useSelfie({
       const spoof = await detectPossibleSpoof(unmirrored);
       if (spoof) {
         pushError("security", "Possible spoof detected. Please try again.");
-        setPhase("front-guide");
+        setPhase("front-instruction");
         return;
       }
 
@@ -170,15 +166,15 @@ export function useSelfie({
       setPhase("front-captured");
 
       window.setTimeout(() => {
-        setPhase("side-guide");
+        setPhase("side-instruction");
       }, 600);
     } catch (err) {
       pushError("selfie", err instanceof Error ? err.message : "Selfie capture failed.");
-      setPhase("front-guide");
+      setPhase("front-instruction");
     }
   }, [webcamRef, pushError, clearError, triggerFlash]);
 
-  // ── Start front countdown ──────────────────────────────────────────────────
+  // ── Front countdown: starts immediately when user clicks Ready ─────────────
   const startCountdown = useCallback(() => {
     clearCountdown();
     let remaining = FRONT_COUNTDOWN_SEC;
@@ -198,18 +194,9 @@ export function useSelfie({
     }, 1000);
   }, [clearCountdown, doCaptureFront]);
 
-  // ── Effect 1: front-guide / front-countdown ────────────────────────────────
-  useEffect(() => {
-    if (capturePhase === "front-guide") {
-      if (faceDetected && faceQualityOk) startCountdown();
-    } else if (capturePhase === "front-countdown") {
-      if (!faceDetected || !faceQualityOk) {
-        clearCountdown();
-        setCountdown(FRONT_COUNTDOWN_SEC);
-        setPhase("front-guide");
-      }
-    }
-  }, [capturePhase, faceDetected, faceQualityOk, startCountdown, clearCountdown]);
+  const startFrontCapture = useCallback(() => {
+    startCountdown();
+  }, [startCountdown]);
 
   // ── Manual fallback: capture front selfie ──────────────────────────────────
   const captureSelfie = useCallback(async () => {
@@ -246,7 +233,7 @@ export function useSelfie({
     nextStep();
   }, [nextStep]);
 
-  // ── Start side hold-and-auto-capture countdown ─────────────────────────────
+  // ── Side countdown: starts immediately when user clicks Ready ──────────────
   const startSideCountdown = useCallback(() => {
     if (sideTimerRef.current !== null) return; // already counting
     let remaining = SIDE_HOLD_SEC;
@@ -264,26 +251,15 @@ export function useSelfie({
     }, 1000);
   }, [clearSideTimer, doCaptureSide]);
 
+  const startSideCapture = useCallback(() => {
+    startSideCountdown();
+  }, [startSideCountdown]);
+
   // ── Public: manual fallback side capture ───────────────────────────────────
   const captureFaceSidePhoto = useCallback(async () => {
     clearSideTimer();
     await doCaptureSide();
   }, [clearSideTimer, doCaptureSide]);
-
-  // ── Effect 2: side-guide / side-ready (auto-capture countdown) ───────────
-  useEffect(() => {
-    if (capturePhase === "side-guide") {
-      if (Math.abs(yawEstimate) >= SIDE_YAW_THRESHOLD) {
-        startSideCountdown();
-      }
-    } else if (capturePhase === "side-ready") {
-      if (Math.abs(yawEstimate) < SIDE_YAW_CANCEL) {
-        clearSideTimer();
-        setCountdown(SIDE_HOLD_SEC);
-        setPhase("side-guide");
-      }
-    }
-  }, [capturePhase, yawEstimate, startSideCountdown, clearSideTimer]);
 
   // ── Reset ──────────────────────────────────────────────────────────────────
   const resetSelfie = useCallback(() => {
@@ -323,5 +299,7 @@ export function useSelfie({
     resetSelfie,
     setSelfieImage,
     setFaceSidePhoto,
+    startFrontCapture,
+    startSideCapture,
   };
 }

@@ -42,10 +42,10 @@ export const PROGRESS_STEPS: Array<{
 // Defined here (not inside the component) so it is not re-created on every render.
 export const PHASE_TO_STEP: Record<CaptureStatus["phase"], number> = {
   idle: 0,
-  "front-guide": 1,
+  "front-instruction": 1,
   "front-countdown": 1,
   "front-captured": 1,
-  "side-guide": 2,
+  "side-instruction": 2,
   "side-ready": 2,
   "side-captured": 2,
   review: 3,

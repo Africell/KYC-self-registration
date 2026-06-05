@@ -347,6 +347,10 @@ const en = {
   selfie_side_turn_right: "Turn your head right",
   selfie_side_hold_still: "Hold still…",
   selfie_side_capturing_in: "Capturing in {{count}}s…",
+  selfie_front_instruction_title: "Front Photo",
+  selfie_front_instruction_desc: "The image is captured automatically. Please make sure you face the camera directly and stay still.",
+  selfie_side_instruction_title: "Side Photo",
+  selfie_side_instruction_desc: "The image is captured automatically. Slowly turn your head to the right and hold still when the angle is right.",
 };
 
 const fr: typeof en = {
@@ -708,6 +712,10 @@ const fr: typeof en = {
   selfie_side_turn_right: "Tournez la tête à droite",
   selfie_side_hold_still: "Restez immobile…",
   selfie_side_capturing_in: "Capture dans {{count}}s…",
+  selfie_front_instruction_title: "Photo frontale",
+  selfie_front_instruction_desc: "La photo est capturée automatiquement. Veillez à faire face à la caméra et à rester immobile.",
+  selfie_side_instruction_title: "Photo de profil",
+  selfie_side_instruction_desc: "La photo est capturée automatiquement. Tournez lentement la tête à droite et restez immobile lorsque l'angle est bon.",
 };
 
 i18n

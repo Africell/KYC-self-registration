@@ -160,6 +160,6 @@ export function transformToBackendPayload(
 
     IdDocFontPhoto_b64: payload.images.IdDocFontPhoto_b64 || "",
     IdDocRearPhoto_b64: payload.images.IdDocRearPhoto_b64 || "",
-    SignaturePhotoAttId64: payload.signatureImage || "",
+    SignaturePhoto_b64: payload.signatureImage || "",
   };
 }

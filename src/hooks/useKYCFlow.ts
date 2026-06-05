@@ -1,8 +1,13 @@
 // src/hooks/useKYCFlow.ts
 
 import { useCallback, useEffect, useState } from "react";
+import i18next from "i18next";
 import { steps } from "../lib/constants/kyc.constants";
-import { loadSession, saveSession, clearSession } from "../lib/services/session.service";
+import {
+  loadSession,
+  saveSession,
+  clearSession,
+} from "../lib/services/session.service";
 import { isOTPTokenValid } from "../lib/services/msisdn.service";
 import type { AppError, StepKey } from "../types/kyc";
 
@@ -44,17 +49,19 @@ function resolveInitialMaxReached(): number {
 
 // Steps that require a valid OTP token to proceed.
 // Step 0 (msisdn) is excluded — it's the destination we redirect back to.
-const STEPS_REQUIRING_TOKEN = new Set(
-  steps.slice(1).map((s) => s.key),
-);
+const STEPS_REQUIRING_TOKEN = new Set(steps.slice(1).map((s) => s.key));
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useKYCFlow(): UseKYCFlowReturn {
   const [stepIndex, setStepIndex] = useState(resolveInitialIndex);
-  const [maxStepReached, setMaxStepReached] = useState(resolveInitialMaxReached);
+  const [maxStepReached, setMaxStepReached] = useState(
+    resolveInitialMaxReached,
+  );
   const [error, setError] = useState<AppError | null>(null);
-  const [agreed, setAgreedState] = useState(() => loadSession()?.agreed ?? false);
+  const [agreed, setAgreedState] = useState(
+    () => loadSession()?.agreed ?? false,
+  );
 
   // Persist step key whenever stepIndex changes
   useEffect(() => {
@@ -89,8 +96,7 @@ export function useKYCFlow(): UseKYCFlowReturn {
       setStepIndex(0);
       setError({
         scope: "Session expired",
-        message:
-          "Your verification session has expired. Please re-enter your number to receive a new code.",
+        message: i18next.t("otp_session_expired"),
       });
       return;
     }
@@ -110,12 +116,15 @@ export function useKYCFlow(): UseKYCFlowReturn {
   const goToStep = useCallback(
     (index: number) => {
       if (index < 0 || index > maxStepReached) return;
-      if (index > 0 && STEPS_REQUIRING_TOKEN.has(steps[index]?.key) && !isOTPTokenValid()) {
+      if (
+        index > 0 &&
+        STEPS_REQUIRING_TOKEN.has(steps[index]?.key) &&
+        !isOTPTokenValid()
+      ) {
         setStepIndex(0);
         setError({
           scope: "Session expired",
-          message:
-            "Your verification session has expired. Please re-enter your number to receive a new code.",
+          message: i18next.t("otp_session_expired"),
         });
         return;
       }

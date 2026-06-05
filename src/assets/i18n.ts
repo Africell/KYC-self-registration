@@ -32,7 +32,8 @@ const en = {
   msisdn_subtitle_otp: "We sent a code to your number.",
   msisdn_subtitle_idle: "Enter your mobile number to get started.",
   msisdn_label: "Mobile number",
-  msisdn_error_invalid: "Enter a valid international number (e.g. +243970000001)",
+  msisdn_error_invalid:
+    "Enter a valid international number (e.g. +243970000001)",
   msisdn_error_registered: "This number is already registered.",
   msisdn_error_captcha: "Security check not ready yet. Please wait a moment.",
   msisdn_error_send: "Failed to send verification code. Please try again.",
@@ -54,6 +55,8 @@ const en = {
   otp_wait: "Didn't receive it? Wait for the timer to resend.",
   otp_attempts_remaining_one: "{{count}} attempt remaining",
   otp_attempts_remaining_other: "{{count}} attempts remaining",
+  otp_session_expired:
+    "Your verification session has expired. Please re-enter your number to receive a new code.",
 
   // ── Consent ───────────────────────────────────────────────────────────────────
   consent_title: "Consent and privacy notice",
@@ -113,7 +116,8 @@ const en = {
   selfie_turn_head: "Turn your head to unlock →",
   selfie_review_header: "Review your photos",
   selfie_review_title: "Photos captured — do they look good?",
-  selfie_review_desc: "Check both photos below. If they look clear and well-framed, tap Confirm to continue.",
+  selfie_review_desc:
+    "Check both photos below. If they look clear and well-framed, tap Confirm to continue.",
   selfie_badge_review: "Review",
   selfie_btn_confirm: "Looks Good →",
 
@@ -228,7 +232,8 @@ const en = {
   sig_error_type: "Only JPG or PNG files are accepted.",
   sig_error_size: "File must be under {{max}} MB.",
   doc_error_size: "File size exceeds 10 MB. Please upload a smaller image.",
-  sig_hint_small: "Image looks very small — make sure the signature is legible.",
+  sig_hint_small:
+    "Image looks very small — make sure the signature is legible.",
   sig_captured: "✓ Signature captured",
   sig_retake: "Retake / replace",
   sig_upload_title: "Click to upload signature photo",
@@ -298,9 +303,11 @@ const en = {
   challenge_lookRight_label: "Look Right",
   challenge_lookRight_instruction: "Slowly turn your head to your right.",
   challenge_raiseLeftHand_label: "Raise Left Hand",
-  challenge_raiseLeftHand_instruction: "Raise your left hand above your shoulder.",
+  challenge_raiseLeftHand_instruction:
+    "Raise your left hand above your shoulder.",
   challenge_raiseRightHand_label: "Raise Right Hand",
-  challenge_raiseRightHand_instruction: "Raise your right hand above your shoulder.",
+  challenge_raiseRightHand_instruction:
+    "Raise your right hand above your shoulder.",
   challenge_nodHead_label: "Nod Your Head",
   challenge_nodHead_instruction: "Nod your head up and down slowly.",
   challenge_moveCloser_label: "Move Closer",
@@ -397,6 +404,8 @@ const fr: typeof en = {
   otp_wait: "Vous ne l'avez pas reçu ? Attendez le minuteur pour renvoyer.",
   otp_attempts_remaining_one: "{{count}} tentative restante",
   otp_attempts_remaining_other: "{{count}} tentatives restantes",
+  otp_session_expired:
+    "Votre session de vérification a expiré. Veuillez saisir à nouveau votre numéro pour recevoir un nouveau code.",
 
   // ── Consent ───────────────────────────────────────────────────────────────────
   consent_title: "Consentement et confidentialité",
@@ -434,8 +443,7 @@ const fr: typeof en = {
   selfie_btn_ready: "Je suis prêt →",
   selfie_challenge_label: "Défi {{index}} sur {{total}}",
   selfie_timeout_title: "Temps écoulé !",
-  selfie_timeout_desc:
-    "Vous n'avez pas complété le défi à temps. Réessayons.",
+  selfie_timeout_desc: "Vous n'avez pas complété le défi à temps. Réessayons.",
   selfie_btn_retry: "Réessayer les défis →",
   selfie_btn_manual: "Capture manuelle",
   selfie_btn_capture_side: "Capturer le profil",
@@ -458,7 +466,8 @@ const fr: typeof en = {
   selfie_turn_head: "Tournez la tête pour déverrouiller →",
   selfie_review_header: "Vérifiez vos photos",
   selfie_review_title: "Photos capturées — sont-elles bonnes ?",
-  selfie_review_desc: "Vérifiez les deux photos ci-dessous. Si elles sont claires et bien cadrées, appuyez sur Confirmer pour continuer.",
+  selfie_review_desc:
+    "Vérifiez les deux photos ci-dessous. Si elles sont claires et bien cadrées, appuyez sur Confirmer pour continuer.",
   selfie_badge_review: "Vérification",
   selfie_btn_confirm: "C'est bon →",
 
@@ -478,7 +487,8 @@ const fr: typeof en = {
   banner_side_ready: "Angle parfait ! Restez immobile — capture automatique…",
   banner_side_countdown: "Capture dans {{count}}s — restez immobile !",
   banner_all_captured: "Toutes les photos capturées ! Poursuite…",
-  banner_review: "Les deux photos sont capturées — vérifiez et confirmez ci-dessous.",
+  banner_review:
+    "Les deux photos sont capturées — vérifiez et confirmez ci-dessous.",
 
   // ── Document ──────────────────────────────────────────────────────────────────
   doc_title: "Capture de document",
@@ -578,7 +588,8 @@ const fr: typeof en = {
     "Téléchargez une photo claire de votre signature manuscrite sur fond blanc. Formats acceptés : JPG, PNG · max {{max}} Mo.",
   sig_error_type: "Seuls les fichiers JPG ou PNG sont acceptés.",
   sig_error_size: "Le fichier doit faire moins de {{max}} Mo.",
-  doc_error_size: "La taille du fichier dépasse 10 Mo. Veuillez télécharger une image plus petite.",
+  doc_error_size:
+    "La taille du fichier dépasse 10 Mo. Veuillez télécharger une image plus petite.",
   sig_hint_small:
     "L'image semble très petite — assurez-vous que la signature est lisible.",
   sig_captured: "✓ Signature capturée",
@@ -591,12 +602,12 @@ const fr: typeof en = {
   sig_tip_2: "Assurez-vous que la signature complète est visible",
   sig_tip_3: "Évitez les ombres, les reflets et les plis sur le papier",
   sig_tip_4: "Photographiez de face (pas en biais)",
-  sig_error_required:
-    "La photo de signature est obligatoire pour continuer.",
+  sig_error_required: "La photo de signature est obligatoire pour continuer.",
   sig_tab_upload: "Télécharger une photo",
   sig_tab_draw: "Dessiner la signature",
   sig_draw_title: "Dessinez votre signature",
-  sig_draw_note: "Utilisez votre souris ou votre doigt pour signer dans le cadre ci-dessous",
+  sig_draw_note:
+    "Utilisez votre souris ou votre doigt pour signer dans le cadre ci-dessous",
   sig_draw_clear: "Effacer",
   sig_draw_confirm: "Utiliser cette signature",
   sig_draw_empty: "Veuillez dessiner votre signature avant de confirmer.",
@@ -635,8 +646,7 @@ const fr: typeof en = {
   review_payload_title: "Données à envoyer",
   review_debug_title: "Données internes (débogage)",
   review_success_title: "Merci !",
-  review_success_desc:
-    "Votre inscription SIM a été soumise avec succès.",
+  review_success_desc: "Votre inscription SIM a été soumise avec succès.",
   review_btn_new: "Nouvelle inscription",
   review_btn_download: "Télécharger JSON",
   review_sending: "Envoi…",
@@ -652,9 +662,11 @@ const fr: typeof en = {
   challenge_lookRight_label: "Regardez à droite",
   challenge_lookRight_instruction: "Tournez lentement la tête à droite.",
   challenge_raiseLeftHand_label: "Levez la main gauche",
-  challenge_raiseLeftHand_instruction: "Levez votre main gauche au-dessus de l'épaule.",
+  challenge_raiseLeftHand_instruction:
+    "Levez votre main gauche au-dessus de l'épaule.",
   challenge_raiseRightHand_label: "Levez la main droite",
-  challenge_raiseRightHand_instruction: "Levez votre main droite au-dessus de l'épaule.",
+  challenge_raiseRightHand_instruction:
+    "Levez votre main droite au-dessus de l'épaule.",
   challenge_nodHead_label: "Hochez la tête",
   challenge_nodHead_instruction: "Hochez la tête de haut en bas lentement.",
   challenge_moveCloser_label: "Rapprochez-vous",
@@ -665,9 +677,11 @@ const fr: typeof en = {
   hint_side_photo: "Tournez la tête à droite pour la photo de profil.",
   hint_one_person: "Une seule personne doit être dans le cadre.",
   hint_move_into_oval: "Placez votre visage dans le guide ovale.",
-  hint_face_detected_ready: "Visage détecté ! Cliquez sur 'Je suis prêt' pour commencer.",
+  hint_face_detected_ready:
+    "Visage détecté ! Cliquez sur 'Je suis prêt' pour commencer.",
   hint_gesture_loading: "Presque prêt… préparation de la détection de gestes.",
-  hint_no_face: "Aucun visage détecté. Rapprochez-vous ou améliorez l'éclairage.",
+  hint_no_face:
+    "Aucun visage détecté. Rapprochez-vous ou améliorez l'éclairage.",
   hint_center_holding: "✓ Restez immobile… ({{current}}/{{required}})",
   hint_center_hold: "Visage centré — restez immobile",
   hint_look_camera: "Regardez directement la caméra",

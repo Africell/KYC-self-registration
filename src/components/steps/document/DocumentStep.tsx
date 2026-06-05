@@ -74,7 +74,7 @@ export default function DocumentStep({
   docType,
   setDocType,
   documentPreviewMode,
-  setDocumentPreviewMode,
+  // setDocumentPreviewMode,
   docWebcamRef,
   docVideoConstraints,
   documentImage,

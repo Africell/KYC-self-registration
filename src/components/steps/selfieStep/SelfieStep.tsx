@@ -11,7 +11,6 @@ import { CHALLENGE_CONFIGS } from "../../../lib/challenges";
 
 import { AlarmClock, Camera, Check, CheckCircle, Lock, RefreshCcw, RotateCcw, Images } from "lucide-react";
 import { TIMER_RADIUS, TIMER_CIRC } from "./selfie.constants";
-import { TURN_YAW_TARGET } from "../../../lib/challenges";
 import { CaptureProgressBar } from "./overlays/CaptureProgressBar";
 import { StatusBanner } from "./overlays/StatusBanner";
 import { CaptureFlash } from "./overlays/Captureflash";
@@ -53,7 +52,7 @@ export default function SelfieStep({
   landmarkStatus,
   livenessCompleted,
   livenessDone,
-  captureSelfie,
+  // captureSelfie,
   prevStep,
   selfieImage,
   faceSidePhoto,

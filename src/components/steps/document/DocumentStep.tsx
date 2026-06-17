@@ -28,7 +28,8 @@ const DOC_TYPES = [
       </svg>
     ),
     hintKey: "doc_hint_national_id",
-    sides: 2,
+    // sides: 2,
+    sides: 1,
   },
   {
     id: "drivers_license",

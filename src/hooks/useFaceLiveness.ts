@@ -44,7 +44,7 @@ type UseFaceLivenessProps = {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CHALLENGE_TIMEOUT_MS = 8_000;
+const CHALLENGE_TIMEOUT_MS = 30_000;
 const DETECTION_INTERVAL_MS = 350;
 const PASS_STREAK_REQUIRED = 2;
 

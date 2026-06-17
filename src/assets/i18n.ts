@@ -88,7 +88,7 @@ const en = {
   selfie_detecting_face: "Detecting your face…",
   selfie_face_title: "Face Detected!",
   selfie_ready_desc:
-    "You'll be given {{count}} quick challenges. Each has 10 seconds. Ready?",
+    "You'll be given {{count}} quick challenges. Each has 30 seconds. Ready?",
   selfie_btn_ready: "I'm Ready →",
   selfie_challenge_label: "Challenge {{index}} of {{total}}",
   selfie_timeout_title: "Time's Up!",

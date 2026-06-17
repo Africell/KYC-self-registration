@@ -88,7 +88,7 @@ export default function SelfieStep({
     capturePhase === "side-captured";
   const isCapturePhase = capturePhase !== "idle";
 
-  const timerPercent = Math.max(0, (challengeTimeLeft / 5) * 100);
+  const timerPercent = Math.max(0, (challengeTimeLeft / 30) * 100);
   const timerColor =
     challengeTimeLeft > 3
       ? "#34d399"

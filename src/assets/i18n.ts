@@ -443,7 +443,7 @@ const fr: typeof en = {
   selfie_detecting_face: "Détection du visage…",
   selfie_face_title: "Visage détecté !",
   selfie_ready_desc:
-    "Vous aurez {{count}} défis rapides. Chacun a 10 secondes. Prêt ?",
+    "Vous aurez {{count}} défis rapides. Chacun a 30 secondes. Prêt ?",
   selfie_btn_ready: "Je suis prêt →",
   selfie_challenge_label: "Défi {{index}} sur {{total}}",
   selfie_timeout_title: "Temps écoulé !",

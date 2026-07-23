@@ -260,7 +260,7 @@ export default function MSISDNStep({
           <input
             value={msisdn}
             onChange={(e) => handlePhoneChange(e.target.value)}
-            placeholder="+243 970 000 001"
+            placeholder="+243 900 100 100"
             inputMode="tel"
             autoComplete="tel"
             disabled={loading}

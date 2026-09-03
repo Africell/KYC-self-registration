@@ -1,7 +1,7 @@
 // src/components/steps/MSISDNStep.tsx
 
-import { useState, useCallback, useMemo } from "react";
-import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { useTranslation } from "react-i18next";
 import {
   checkMSISDN,
@@ -30,13 +30,22 @@ interface ErrorState {
 
 const EMPTY_ERRORS: ErrorState = { input: "", otp: "", captcha: "" };
 
-function RecaptchaDisclaimer() {
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string;
+
+// How long to hold after a successful captcha before moving on, so the
+// widget's success checkmark is actually visible instead of being
+// unmounted immediately by the phase/step change that follows.
+const SUCCESS_DISPLAY_MS = 700;
+
+type CaptchaAction = "msisdn_check" | "otp_verify";
+
+function CaptchaDisclaimer() {
   const { t } = useTranslation();
   return (
     <p className="text-center text-xs text-slate-600">
       {t("msisdn_recaptcha")}{" "}
       <a
-        href="https://policies.google.com/privacy"
+        href="https://www.cloudflare.com/privacypolicy/"
         target="_blank"
         rel="noreferrer"
         className="underline hover:text-slate-400 transition-colors"
@@ -45,7 +54,7 @@ function RecaptchaDisclaimer() {
       </a>{" "}
       &amp;{" "}
       <a
-        href="https://policies.google.com/terms"
+        href="https://www.cloudflare.com/website-terms/"
         target="_blank"
         rel="noreferrer"
         className="underline hover:text-slate-400 transition-colors"
@@ -56,6 +65,33 @@ function RecaptchaDisclaimer() {
   );
 }
 
+function useTurnstileExecutor(ref: React.RefObject<TurnstileInstance | null>) {
+  const pendingRef = useRef<{
+    resolve: (token: string) => void;
+    reject: (err: Error) => void;
+  } | null>(null);
+
+  const onSuccess = useCallback((token: string) => {
+    pendingRef.current?.resolve(token);
+    pendingRef.current = null;
+  }, []);
+
+  const onError = useCallback(() => {
+    pendingRef.current?.reject(new Error("TURNSTILE_ERROR"));
+    pendingRef.current = null;
+  }, []);
+
+  const execute = useCallback(() => {
+    return new Promise<string>((resolve, reject) => {
+      pendingRef.current = { resolve, reject };
+      ref.current?.reset();
+      ref.current?.execute();
+    });
+  }, [ref]);
+
+  return { execute, onSuccess, onError };
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function MSISDNStep({
@@ -64,7 +100,10 @@ export default function MSISDNStep({
   nextStep,
 }: MSISDNStepProps) {
   const { t } = useTranslation();
-  const { executeRecaptcha } = useGoogleReCaptcha();
+  const msisdnCheckRef = useRef<TurnstileInstance>(null);
+  const otpVerifyRef = useRef<TurnstileInstance>(null);
+  const msisdnCheckCaptcha = useTurnstileExecutor(msisdnCheckRef);
+  const otpVerifyCaptcha = useTurnstileExecutor(otpVerifyRef);
 
   const [phase, setPhase] = useState<Phase>("IDLE");
   const [errors, setErrors] = useState<ErrorState>(EMPTY_ERRORS);
@@ -86,22 +125,23 @@ export default function MSISDNStep({
   );
 
   const executeCaptcha = useCallback(
-    async (action: string): Promise<string | null> => {
-      if (!executeRecaptcha) {
-        setError("captcha", t("msisdn_error_captcha"));
-        return null;
-      }
+    async (action: CaptchaAction): Promise<string | null> => {
+      const captcha =
+        action === "msisdn_check" ? msisdnCheckCaptcha : otpVerifyCaptcha;
 
-      // BROWSER_ERROR is a transient client-side failure (script load timing,
-      // brief network blip). Google recommends retrying execute() in this case.
+      // Transient failures (script load timing, brief network blip) are
+      // retried by resetting the widget and re-executing it.
       const MAX_ATTEMPTS = 3;
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         try {
-          return await executeRecaptcha(action);
+          const token = await captcha.execute();
+          // Widget still shows its success checkmark at this point — hold
+          // here briefly so it's visible before the phase/step change below
+          // unmounts it, instead of the UI jumping straight past it.
+          await new Promise((res) => setTimeout(res, SUCCESS_DISPLAY_MS));
+          return token;
         } catch (err) {
-          const isBrowserError =
-            err instanceof Error && err.message.includes("BROWSER_ERROR");
-          if (!isBrowserError || attempt === MAX_ATTEMPTS - 1) {
+          if (attempt === MAX_ATTEMPTS - 1) {
             setError("captcha", t("msisdn_error_captcha"));
             return null;
           }
@@ -112,7 +152,7 @@ export default function MSISDNStep({
       setError("captcha", t("msisdn_error_captcha"));
       return null;
     },
-    [executeRecaptcha, setError, t],
+    [msisdnCheckCaptcha, otpVerifyCaptcha, setError, t],
   );
 
   // ── Phone input ───────────────────────────────────────────────────────────
@@ -241,6 +281,43 @@ export default function MSISDNStep({
   const showPhoneInput = phase === "IDLE" || phase === "REGISTERED";
   const showOTPInput = phase === "OTP_SENT";
 
+  // Turnstile must stay actually rendered (not display:none) or its
+  // challenge iframe can stall instead of resolving. "interaction-only"
+  // keeps it invisible/zero-size when no challenge is needed, but lets it
+  // render in place — visible and solvable — if Cloudflare decides this
+  // visitor needs an interactive check. Each widget is rendered directly
+  // above the button it gates.
+  // TEMP DEBUG: appearance set to "always" so the widgets are visible
+  // on-screen for verification — switch back to "interaction-only" once
+  // confirmed.
+  const msisdnCheckWidget = (
+    <Turnstile
+      ref={msisdnCheckRef}
+      siteKey={TURNSTILE_SITE_KEY}
+      options={{
+        action: "msisdn_check",
+        execution: "execute",
+        appearance: "always",
+      }}
+      onSuccess={msisdnCheckCaptcha.onSuccess}
+      onError={msisdnCheckCaptcha.onError}
+    />
+  );
+
+  const otpVerifyWidget = (
+    <Turnstile
+      ref={otpVerifyRef}
+      siteKey={TURNSTILE_SITE_KEY}
+      options={{
+        action: "otp_verify",
+        execution: "execute",
+        appearance: "always",
+      }}
+      onSuccess={otpVerifyCaptcha.onSuccess}
+      onError={otpVerifyCaptcha.onError}
+    />
+  );
+
   return (
     <section className="space-y-6">
       <div>
@@ -286,6 +363,8 @@ export default function MSISDNStep({
             </p>
           )}
 
+          {msisdnCheckWidget}
+
           <button
             onClick={() => void handleContinue()}
             disabled={!msisdn.trim() || loading}
@@ -303,7 +382,7 @@ export default function MSISDNStep({
             )}
           </button>
 
-          <RecaptchaDisclaimer />
+          <CaptchaDisclaimer />
         </div>
       )}
 
@@ -335,9 +414,10 @@ export default function MSISDNStep({
             loading={loading}
             initialSeconds={otpTotalSeconds}
             attemptsLeft={attemptsLeft}
+            captchaSlot={otpVerifyWidget}
           />
 
-          <RecaptchaDisclaimer />
+          <CaptchaDisclaimer />
         </div>
       )}
     </section>

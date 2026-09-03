@@ -10,6 +10,7 @@ interface OTPSectionProps {
   loading?:       boolean;
   initialSeconds: number;
   attemptsLeft:   number | undefined;
+  captchaSlot?:   React.ReactNode;
 }
 
 const OTP_LENGTH = 5;
@@ -21,6 +22,7 @@ export default function OTPSection({
   loading = false,
   initialSeconds,
   attemptsLeft,
+  captchaSlot,
 }: OTPSectionProps) {
   const { t } = useTranslation();
   const [digits,      setDigits]    = useState<string[]>(Array(OTP_LENGTH).fill(""));
@@ -173,6 +175,7 @@ export default function OTPSection({
       )}
 
       {/* ── Verify button ────────────────────────────────────────────────── */}
+      {captchaSlot}
       <button
         onClick={handleSubmit}
         disabled={!filled || loading}

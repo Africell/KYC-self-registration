@@ -42,7 +42,7 @@ const en = {
   msisdn_code_sent: "Code sent to {{phone}}",
   msisdn_change: "Change number",
   msisdn_error_resend: "Failed to resend code. Please try again.",
-  msisdn_recaptcha: "Protected by reCAPTCHA —",
+  msisdn_recaptcha: "Protected by Cloudflare Turnstile —",
   msisdn_privacy: "Privacy",
   msisdn_terms: "Terms",
 
@@ -395,7 +395,7 @@ const fr: typeof en = {
   msisdn_code_sent: "Code envoyé au {{phone}}",
   msisdn_change: "Changer de numéro",
   msisdn_error_resend: "Échec de renvoi du code. Veuillez réessayer.",
-  msisdn_recaptcha: "Protégé par reCAPTCHA —",
+  msisdn_recaptcha: "Protégé par Cloudflare Turnstile —",
   msisdn_privacy: "Confidentialité",
   msisdn_terms: "Conditions",
 

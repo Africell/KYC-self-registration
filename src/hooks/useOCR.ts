@@ -298,9 +298,10 @@ export function useOCR({
         const res = response.Data as DRCNationalIDApiResponse;
 
         if (!res.success) {
+          setFields(initialFields);
           setMrzValid(false);
           setMrzMessage("Could not read the national ID. Ensure it is flat, well-lit, and all corners are visible.");
-          nextStep();
+          pushError("ocr", "Could not read the national ID. Ensure it is flat, well-lit, and all corners are visible.");
           return;
         }
 
@@ -330,9 +331,10 @@ export function useOCR({
         const res = response.Data as DRCDrivingLicenceApiResponse;
 
         if (!res.success) {
+          setFields(initialFields);
           setMrzValid(false);
           setMrzMessage("Could not read the driving licence. Ensure it is flat, well-lit, and all corners are visible.");
-          nextStep();
+          pushError("ocr", "Could not read the driving licence. Ensure it is flat, well-lit, and all corners are visible.");
           return;
         }
 
@@ -362,26 +364,32 @@ export function useOCR({
 
       // ── Step 3: handle API-level failure ──────────────────────────────────
       if (!res.success) {
-        setFields((prev) => ({
-          ...prev,
+        setFields({
+          ...initialFields,
           rawOCRText: res.mrz_lines?.join("\n") ?? "",
-        }));
+        });
         setMrzValid(false);
         setMrzMessage(
           "OCR API could not read the document. Ensure it is flat, well-lit, and the MRZ strip is visible.",
         );
-        nextStep();
+        pushError(
+          "ocr",
+          "OCR API could not read the document. Ensure it is flat, well-lit, and the MRZ strip is visible.",
+        );
         return;
       }
 
       // ── Step 4: no MRZ lines returned ─────────────────────────────────────
       if (!res.mrz_lines || res.mrz_lines.length < 2) {
-        setFields((prev) => ({ ...prev, rawOCRText: "" }));
+        setFields({ ...initialFields, rawOCRText: "" });
         setMrzValid(false);
         setMrzMessage(
           "No MRZ detected. Ensure the document is flat, well-lit, and the MRZ strip is visible.",
         );
-        nextStep();
+        pushError(
+          "ocr",
+          "No MRZ detected. Ensure the document is flat, well-lit, and the MRZ strip is visible.",
+        );
         return;
       }
 

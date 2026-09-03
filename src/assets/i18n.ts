@@ -277,6 +277,8 @@ const en = {
     "Your registration has been submitted successfully. We will review your information and get back to you shortly.",
   match_btn_new: "Start New Registration",
   match_error_submit: "Submission failed. Please try again.",
+  match_below_threshold:
+    "Face similarity is low. Please retake your selfie or document photo to continue.",
 
   // ── Review ────────────────────────────────────────────────────────────────────
   review_title: "Review & submit",
@@ -640,6 +642,8 @@ const fr: typeof en = {
     "Votre inscription a été soumise avec succès. Nous examinerons vos informations et vous contacterons rapidement.",
   match_btn_new: "Nouvelle inscription",
   match_error_submit: "L'envoi a échoué. Veuillez réessayer.",
+  match_below_threshold:
+    "La similarité faciale est faible. Veuillez reprendre votre selfie ou la photo du document pour continuer.",
 
   // ── Review ────────────────────────────────────────────────────────────────────
   review_title: "Vérifier et soumettre",

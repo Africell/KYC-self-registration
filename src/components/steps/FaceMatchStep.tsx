@@ -14,6 +14,8 @@ type Props = {
   onReset: () => void;
 };
 
+const MIN_FACE_MATCH_SIMILARITY = 0.6;
+
 async function buildDebugCrops(
   selfieDataUrl: string,
   docDataUrl: string,
@@ -93,6 +95,7 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
   }, [selfieImage, documentImage]);
 
   const passed = faceMatch?.passed;
+  const belowThreshold = faceMatch != null && faceMatch.similarity < MIN_FACE_MATCH_SIMILARITY;
 
   if (submitted) {
     return (
@@ -199,6 +202,12 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
         </div>
       )}
 
+      {belowThreshold && (
+        <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          {t("match_below_threshold")}
+        </div>
+      )}
+
       {submitError && (
         <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
           <span className="font-semibold uppercase tracking-wide text-rose-400 mr-2">{t("match_error")}</span>
@@ -219,7 +228,7 @@ export default function FaceMatchStep({ selfieImage, documentImage, faceMatch, p
         </button>
         <button
           onClick={() => void handleSubmit()}
-          disabled={submitting || !faceMatch}
+          disabled={submitting || !faceMatch || belowThreshold}
           className="flex items-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
